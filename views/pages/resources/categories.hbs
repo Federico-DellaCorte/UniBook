@@ -1,0 +1,63 @@
+{{!--
+  Pagina indice delle categorie di risorse lato utente.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/resources/categories, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  Questa pagina rappresenta il punto di ingresso alla consultazione delle
+  risorse prenotabili. L'utente può:
+    - tornare alla dashboard;
+    - usare il form di ricerca avanzata;
+    - scegliere una categoria tramite card cliccabile.
+
+  Le categorie mostrate arrivano dalla variabile categories, preparata lato
+  backend da resources.routes.js tramite buildUserCategoryStats().
+
+  Ogni elemento di categories contiene:
+    - type: valore tecnico della categoria, usato negli URL;
+    - labelPlural: nome plurale mostrato all'utente;
+    - countText: testo con il numero di risorse disponibili.
+
+  Il form di ricerca viene incluso tramite il partial resources-search-form.hbs.
+  Le icone delle categorie vengono invece incluse tramite category-icon.hbs.
+
+  Cliccando una card, l'utente viene portato a:
+
+    /resources?type=<categoria>
+
+  dove la rotta GET /resources mostra solo le risorse attive di quella categoria.
+--}}
+
+{{!-- Contenitore principale della pagina risorse. --}}
+<main class="page">
+  {{!-- Intestazione della pagina: link alla dashboard, titolo e descrizione. --}}
+  <header class="page-header">
+    <a href="/dashboard" class="page-header__back">← Dashboard</a>
+    <h1 class="page-header__title">Risorse disponibili</h1>
+    <p class="page-header__subtitle">Scegli una categoria per esplorare le risorse attualmente attive, oppure usa il form qui sotto per cercarle.</p>
+  </header>
+
+  {{!-- Form di ricerca risorse incluso come partial riutilizzabile. --}}
+  {{> resources-search-form}}
+
+  {{!-- Griglia delle card categoria mostrate all'utente. --}}
+  <div class="category-grid">
+    {{!-- Ciclo sulle categorie preparate dal backend. Ogni categoria genera una card. --}}
+    {{#each categories}}
+    {{!-- Card cliccabile: porta alla lista delle risorse attive della categoria scelta. --}}
+      <a class="category-card" href="/resources?type={{type}}">
+        {{!-- Icona della categoria: il tipo modifica colore/stile tramite classe CSS. --}}
+        <span class="category-card__icon category-card__icon--{{type}}">
+          {{> category-icon}}
+        </span>
+        {{!-- Corpo della card: mostra nome categoria e numero di risorse disponibili. --}}
+        <div class="category-card__body">
+          <h2 class="category-card__title">{{labelPlural}}</h2>
+          <p class="category-card__count">{{countText}}</p>
+        </div>
+      </a>
+    {{/each}}
+  </div>
+</main>

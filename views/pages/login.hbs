@@ -1,0 +1,103 @@
+{{!--
+  Pagina di login dell'applicazione UniBook.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express esegue
+  res.render('pages/login'), il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  La pagina mostra una card centrale con:
+    - il nome UniBook;
+    - il titolo "Accedi al tuo account";
+    - il form di login;
+    - il link alla pagina di registrazione.
+
+  Il form invia i dati con metodo POST verso /login.
+  Questo significa che quando l'utente preme "Accedi", il browser manda username
+  o email e password alla rotta POST /login, definita in auth.routes.js.
+
+  Il campo usernameOrEmail è unico perché il backend permette di accedere sia con
+  username sia con email. Sarà userRepo.findByUsernameOrEmail() a cercare nel
+  database un utente che corrisponda a uno dei due valori.
+
+  Il template può essere renderizzato in due situazioni:
+    - prima visita alla pagina, senza errori;
+    - login fallito, con values ed errors passati dalla rotta.
+
+  values serve a ripopolare i campi non sensibili dopo un errore.
+  errors serve a mostrare messaggi di validazione vicino ai campi.
+
+  La password, invece, non viene mai ripopolata nel value dell'input.
+  È una scelta corretta di sicurezza: se il login fallisce, l'utente deve
+  riscriverla.
+--}}
+
+{{!-- Contenitore principale della pagina di autenticazione. --}}
+<main class="auth">
+  {{!-- Card centrale che contiene titolo, form di login e link alla registrazione. --}}
+  <section class="card">
+    <h1 class="card__brand">
+      <a href="/" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Accedi al tuo account</h2>
+
+    {{!--
+  Form di login.
+
+  method="post" invia credenziali nel body della richiesta.
+  action="/login" collega il form alla rotta POST /login.
+  novalidate disattiva la validazione automatica del browser: gli errori veri
+  vengono gestiti lato server e mostrati tramite errors.
+--}}
+    <form method="post" action="/login" class="form" novalidate>
+      {{!--
+        Il campo accetta indifferentemente username o indirizzo email.
+        L'attributo autocomplete="username" suggerisce ai gestori di
+        password del browser di proporre l'identificativo di accesso.
+      --}}
+      <div class="form-field">
+        <label for="usernameOrEmail" class="form-label">Username o email</label>
+        <input
+          id="usernameOrEmail"
+          name="usernameOrEmail"
+          type="text"
+          class="form-input{{#if errors.usernameOrEmail}} form-input--invalid{{/if}}"
+          value="{{values.usernameOrEmail}}"
+          autocomplete="username"
+          autofocus
+        />
+        {{#if errors.usernameOrEmail}}
+          <p class="form-error">{{errors.usernameOrEmail}}</p>
+        {{/if}}
+      </div>
+
+      {{!--
+  Campo password.
+
+  Non ha value: per sicurezza la password non viene mai reinserita
+  automaticamente nel template dopo un errore di login.
+--}}
+      <div class="form-field">
+        <label for="password" class="form-label">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          class="form-input{{#if errors.password}} form-input--invalid{{/if}}"
+          autocomplete="current-password"
+        />
+        {{#if errors.password}}
+          <p class="form-error">{{errors.password}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Bottone che invia il form alla rotta POST /login. --}}
+      <button type="submit" class="btn btn--primary btn--block">Accedi</button>
+    </form>
+
+    {{!-- Link alternativo per utenti che non hanno ancora un account. --}}
+    <p class="card__alt">
+      Non hai un account? <a href="/register">Registrati</a>
+    </p>
+  </section>
+</main>

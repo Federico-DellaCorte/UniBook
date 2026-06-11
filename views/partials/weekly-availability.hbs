@@ -1,0 +1,269 @@
+{{!--
+  Partial per gestire la disponibilità settimanale di una risorsa.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  Non è una pagina completa, ma un partial: viene incluso dentro i form admin
+  di creazione e modifica risorsa.
+
+  Il suo compito è mostrare una settimana composta da 7 giorni, da lunedì a
+  domenica. Per ogni giorno l'admin può decidere:
+    - se la risorsa è aperta oppure chiusa;
+    - a che ora apre;
+    - a che ora chiude.
+
+  Il partial riceve dal backend alcune variabili:
+    - availability: array di 7 oggetti, uno per ogni giorno della settimana;
+    - errors: eventuali errori di validazione del form;
+    - generalError: errore generale, per esempio se tutti i giorni sono chiusi;
+    - startSlots: orari validi come apertura;
+    - endSlots: orari validi come chiusura.
+
+  Ogni elemento di availability contiene dati come:
+    - weekday: numero del giorno, da 1 a 7;
+    - dayName: nome del giorno, per esempio "Lunedì";
+    - is_open: indica se quel giorno è aperto;
+    - opens_at: orario di apertura;
+    - closes_at: orario di chiusura.
+
+  I nomi dei campi seguono la forma:
+    - day1_open;
+    - day1_opens_at;
+    - day1_closes_at;
+    - ...
+    - day7_open;
+    - day7_opens_at;
+    - day7_closes_at.
+
+  Questa struttura permette al backend di ricostruire facilmente la settimana:
+  resourceAvailabilityService legge questi campi, li trasforma in 7 righe e li
+  valida prima del salvataggio.
+
+  Nota importante sui checkbox HTML:
+  se una checkbox non è selezionata, il browser non invia proprio quel campo.
+  Quindi, lato server, la presenza di dayN_open significa "giorno aperto",
+  mentre la sua assenza significa "giorno chiuso".
+
+  Gli orari sono divisi in due elenchi:
+    - startSlots per l'apertura, da 00:00 a 23:30;
+    - endSlots per la chiusura, da 00:30 a 24:00.
+
+  24:00 è ammesso solo come orario di chiusura, perché rappresenta la fine
+  della giornata. Non è ammesso come orario di apertura.
+
+  La parte dinamica lato browser, cioè abilitare/disabilitare i select quando
+  l'admin apre o chiude un giorno, è gestita da:
+    public/js/availability-toggle.js
+
+  Anche senza JavaScript il form resta valido: il backend ignora gli orari dei
+  giorni chiusi e salva null per apertura e chiusura.
+--}}
+
+{{!--
+  Errore generale della disponibilità settimanale.
+
+  Questo messaggio non riguarda un singolo campo, ma l'intero blocco della
+  disponibilità. Per esempio viene usato quando l'admin lascia chiusi tutti
+  i giorni della settimana.
+
+  role="alert" segnala ai lettori di schermo che il messaggio è importante.
+--}}
+{{#if generalError}}
+  <div class="callout callout--danger" role="alert">{{generalError}}</div>
+{{/if}}
+
+{{!--
+  Fieldset della disponibilità settimanale.
+
+  <fieldset> raggruppa campi del form che appartengono allo stesso argomento.
+  In questo caso tutti i campi riguardano la settimana di apertura della risorsa.
+
+  <legend> fornisce il titolo del gruppo, migliorando sia la leggibilità sia
+  l'accessibilità del form.
+--}}
+<fieldset class="weekly-availability">
+  <legend class="weekly-availability__legend">Disponibilità settimanale</legend>
+
+  {{!--
+  Ciclo sui 7 giorni della settimana.
+
+  {{#each availability}} è un ciclo Handlebars.
+  Per ogni giorno presente nell'array availability viene generato un blocco
+  HTML completo con:
+    - checkbox aperto/chiuso;
+    - nome del giorno;
+    - select dell'orario di apertura;
+    - select dell'orario di chiusura;
+    - eventuali errori del giorno.
+
+  Dentro questo ciclo, le variabili weekday, dayName, is_open, opens_at e
+  closes_at si riferiscono al giorno corrente.
+--}}
+  {{#each availability}}
+  {{!--
+  Blocco HTML di un singolo giorno.
+
+  La classe weekly-day identifica il contenitore del giorno.
+  Se is_open è falso, Handlebars aggiunge anche la classe weekly-day--closed.
+
+  {{#unless is_open}} significa:
+  "se is_open non è vero, allora applica questo contenuto".
+
+  data-weekday="{{weekday}}" salva nel markup il numero del giorno.
+  Questo attributo può essere letto dal JavaScript lato client per sapere quale
+  riga del form sta manipolando.
+--}}
+    <div class="weekly-day {{#unless is_open}}weekly-day--closed{{/unless}}" data-weekday="{{weekday}}">
+      {{!--
+  Checkbox che indica se il giorno è aperto o chiuso.
+
+  Se la checkbox è selezionata, il browser invia nel form il campo:
+    dayN_open = 1
+
+  dove N è il numero del giorno.
+
+  Se la checkbox non è selezionata, il browser non invia quel campo.
+  Il backend interpreta quindi l'assenza del campo come "giorno chiuso".
+
+  {{#if is_open}}checked{{/if}} mantiene selezionata la checkbox quando quel
+  giorno risulta aperto.
+--}}
+      <label class="weekly-day__toggle">
+        <input
+          type="checkbox"
+          name="day{{weekday}}_open"
+          value="1"
+          {{#if is_open}}checked{{/if}}
+          class="weekly-day__checkbox"
+        />
+        <span class="weekly-day__name">{{dayName}}</span>
+      </label>
+
+      {{!--
+  Contenitore degli orari di apertura e chiusura.
+
+  Dentro questo blocco ci sono due select:
+    - uno per l'orario di apertura;
+    - uno per l'orario di chiusura.
+
+  Se il giorno è chiuso, i select vengono disabilitati con disabled.
+  Questo rende chiaro all'admin che gli orari non saranno considerati per quel
+  giorno.
+--}}
+      <div class="weekly-day__times">
+
+        {{!--
+  Select dell'orario di apertura.
+
+  Il name viene costruito dinamicamente:
+    day{{weekday}}_opens_at
+
+  Per esempio:
+    day1_opens_at per lunedì;
+    day2_opens_at per martedì.
+
+  La classe form-input--invalid viene aggiunta solo se esiste un errore per
+  questo specifico campo.
+
+  Per controllare l'errore si usa:
+    lookup ../errors (concat 'day' weekday '_opens_at')
+
+  lookup permette di leggere una proprietà dinamica da errors.
+  concat costruisce il nome della proprietà, per esempio day1_opens_at.
+  ../ serve a uscire dal contesto del giorno corrente e leggere l'oggetto
+  errors del contesto esterno.
+--}}
+        <div class="weekly-day__time">
+          <span class="weekly-day__time-label">Apertura</span>
+          <select
+            name="day{{weekday}}_opens_at"
+            class="form-input weekly-day__select{{#if (lookup ../errors (concat 'day' weekday '_opens_at'))}} form-input--invalid{{/if}}"
+            {{#unless is_open}}disabled{{/unless}}
+          >
+            <option value="">--</option>
+            {{!--
+  Opzioni dell'orario di apertura.
+
+  startSlots contiene gli orari validi come apertura.
+  Sono generati dal backend e vanno da 00:00 a 23:30.
+
+  24:00 non compare qui perché non può essere un orario di apertura.
+
+  Dentro questo ciclo, {{this}} rappresenta il singolo orario.
+  La condizione {{#if (eq this ../opens_at)}} mantiene selezionato l'orario
+  già salvato o reinserito dopo un errore di validazione.
+--}}
+            {{#each ../startSlots}}
+              <option value="{{this}}" {{#if (eq this ../opens_at)}}selected{{/if}}>{{this}}</option>
+            {{/each}}
+          </select>
+        </div>
+
+{{!--
+  Select dell'orario di chiusura.
+
+  Il name viene costruito dinamicamente:
+    day{{weekday}}_closes_at
+
+  Per esempio:
+    day1_closes_at per lunedì;
+    day2_closes_at per martedì.
+
+  Anche qui la classe form-input--invalid viene aggiunta solo se il backend
+  ha prodotto un errore per quel campo specifico.
+--}}
+        <div class="weekly-day__time">
+          <span class="weekly-day__time-label">Chiusura</span>
+          <select
+            name="day{{weekday}}_closes_at"
+            class="form-input weekly-day__select{{#if (lookup ../errors (concat 'day' weekday '_closes_at'))}} form-input--invalid{{/if}}"
+            {{#unless is_open}}disabled{{/unless}}
+          >
+            <option value="">--</option>
+            {{!--
+  Opzioni dell'orario di chiusura.
+
+  endSlots contiene gli orari validi come fine giornata o chiusura.
+  Va da 00:30 a 24:00.
+
+  24:00 è ammesso qui perché rappresenta la fine della giornata.
+  Questo consente di indicare, per esempio, una risorsa aperta fino a mezzanotte.
+
+  {{this}} rappresenta il singolo orario.
+  La condizione {{#if (eq this ../closes_at)}} mantiene selezionato l'orario
+  di chiusura già presente nei dati.
+--}}
+            {{#each ../endSlots}}
+              <option value="{{this}}" {{#if (eq this ../closes_at)}}selected{{/if}}>{{this}}</option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+
+      {{!--
+  Messaggio di errore dell'orario di apertura.
+
+  Se nel backend esiste un errore con chiave dayN_opens_at, viene mostrato sotto
+  al campo del giorno corrispondente.
+
+  Esempio:
+    errors.day1_opens_at = "Orario di apertura obbligatorio."
+
+  In quel caso, questo blocco stampa il messaggio sotto il lunedì.
+--}}
+      {{#if (lookup ../errors (concat 'day' weekday '_opens_at'))}}
+        <p class="form-error weekly-day__error">{{lookup ../errors (concat 'day' weekday '_opens_at')}}</p>
+      {{/if}}
+      {{!--
+  Messaggio di errore dell'orario di chiusura.
+
+  Funziona come l'errore di apertura, ma controlla la chiave dayN_closes_at.
+
+  Viene usato, per esempio, se la chiusura è mancante, non valida oppure non è
+  successiva all'apertura.
+--}}
+      {{#if (lookup ../errors (concat 'day' weekday '_closes_at'))}}
+        <p class="form-error weekly-day__error">{{lookup ../errors (concat 'day' weekday '_closes_at')}}</p>
+      {{/if}}
+    </div>
+  {{/each}}
+</fieldset>

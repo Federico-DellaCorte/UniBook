@@ -1,0 +1,26 @@
+{
+  "name": "unibook",
+  "version": "0.3.0",
+  "description": "Piattaforma per la prenotazione di risorse universitarie — progetto TIW 2026",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:init": "node src/db/init.js",
+    "seed": "node src/db/seed.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^12.10.0",
+    "express": "^5.1.0",
+    "express-handlebars": "^8.0.1",
+    "express-session": "^1.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

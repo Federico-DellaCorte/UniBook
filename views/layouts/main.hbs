@@ -1,0 +1,69 @@
+{{!--
+  Layout principale dell'applicazione UniBook.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  Handlebars non è il frontend dinamico del browser, ma un motore di template
+  lato server: Express lo usa per generare pagine HTML prima di inviarle al
+  browser.
+
+  Questo layout è il contenitore comune di tutte le pagine del sito.
+  Significa che ogni pagina renderizzata da Express viene inserita dentro
+  questa struttura base.
+
+  In pratica, quando una rotta esegue res.render(...), express-handlebars:
+    1. prende questo file main.hbs;
+    2. sostituisce {{title}} con il titolo passato dalla rotta;
+    3. inserisce la pagina specifica dentro {{{body}}};
+    4. include eventuali partial, come {{> flash}};
+    5. produce l'HTML finale che il browser riceve.
+
+  Le parti principali sono:
+    - <!DOCTYPE html>, che dichiara un documento HTML moderno;
+    - <html lang="it">, che indica che la lingua della pagina è italiana;
+    - <head>, che contiene informazioni tecniche come charset, viewport,
+      titolo e collegamento al CSS;
+    - <body>, che contiene ciò che l'utente vede nella pagina;
+    - {{> flash}}, che include il partial dei messaggi temporanei;
+    - {{{body}}}, che rappresenta il contenuto specifico della pagina corrente;
+    - lo script flash-dismiss.js, che gestisce la chiusura automatica dei
+      messaggi flash.
+
+  Differenza importante:
+    - {{title}} usa due parentesi graffe perché inserisce testo semplice;
+    - {{{body}}} usa tre parentesi graffe perché inserisce HTML già pronto.
+
+  Le tre parentesi graffe sono necessarie perché il contenuto della pagina non
+  deve essere trattato come testo, ma come markup HTML da renderizzare.
+--}}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  {{> flash}}
+  {{{body}}}
+  
+  {{!--
+  Script JavaScript lato client.
+
+  Questo file viene caricato dal browser dopo che la pagina HTML è stata inviata
+  dal server. A differenza di Handlebars, che lavora lato server, questo script
+  lavora direttamente nel browser dell'utente.
+
+  flash-dismiss.js serve a far sparire automaticamente i messaggi flash dopo
+  alcuni secondi.
+
+  L'attributo defer dice al browser:
+    - scarica lo script senza bloccare il caricamento della pagina;
+    - eseguilo solo dopo aver letto tutto l'HTML.
+
+  Questo evita che lo script cerchi elementi della pagina prima che esistano nel
+  DOM.
+--}}
+  <script defer src="/js/flash-dismiss.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+{{!--
+  Pagina lista delle risorse attive di una categoria.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/resources/list, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  Questa pagina viene usata quando l'utente seleziona una categoria dalla pagina
+  indice delle risorse. Per esempio:
+
+    /resources?type=aula
+
+  In quel caso la rotta GET /resources, definita in resources.routes.js, recupera
+  dal database solo le risorse attive appartenenti a quella categoria e le passa
+  al template tramite la variabile resources.
+
+  Le principali variabili ricevute dal backend sono:
+    - categoryLabel: nome leggibile della categoria, per esempio "Aule";
+    - countText: testo con il numero di risorse disponibili;
+    - resources: array delle risorse attive da mostrare;
+    - availabilitySummary: sintesi della disponibilità settimanale di ogni risorsa.
+
+  Ogni risorsa viene mostrata come card con nome, capienza, posizione,
+  descrizione eventuale, disponibilità settimanale sintetica e link alla scheda
+  dettaglio.
+
+  Se non ci sono risorse attive nella categoria, la pagina non mostra una griglia
+  vuota, ma un messaggio di stato vuoto.
+--}}
+
+{{!-- Contenitore principale della pagina lista risorse. --}}
+<main class="page">
+  {{!-- Intestazione: link alle categorie, nome categoria e conteggio risorse. --}}
+  <header class="page-header">
+    <a href="/resources" class="page-header__back">← Tutte le categorie</a>
+    <h1 class="page-header__title">{{categoryLabel}}</h1>
+    <p class="page-header__subtitle">{{countText}}</p>
+  </header>
+
+  {{#if resources.length}}
+    {{!-- Griglia delle risorse attive della categoria selezionata. --}}
+    <div class="resource-grid">
+      {{!-- Ciclo Handlebars: ogni risorsa dell'array genera una card. --}}
+      {{#each resources}}
+        {{!-- Card della singola risorsa con dati principali e link al dettaglio. --}}
+        <article class="resource-card">
+          <header class="resource-card__head">
+            <h2 class="resource-card__title">{{name}}</h2>
+          </header>
+          {{!-- Metadati della risorsa: capienza e posizione. --}}
+          <dl class="resource-card__meta">
+            <div>
+              <dt>Capienza</dt>
+              <dd>{{capacity}}</dd>
+            </div>
+            <div>
+              <dt>Posizione</dt>
+              <dd>{{location}}</dd>
+            </div>
+          </dl>
+          {{!-- Descrizione opzionale: viene mostrata solo se presente nel database. --}}
+          {{#if description}}
+            <p class="resource-card__description">{{description}}</p>
+          {{/if}}
+
+          {{!--
+            Sintesi compatta della disponibilità settimanale,
+            costruita lato server con summarizeWeeklyAvailability:
+            giorni consecutivi con stesso orario vengono raggruppati
+            (es. "Lun–Ven 09:00–19:00 · Sab–Dom chiusa"). Lo stile è
+            condiviso con la list view amministrativa per garantire
+            coerenza visiva fra le due aree.
+          --}}
+          {{#if availabilitySummary.length}}
+            <div class="resource-card__availability">
+              <span class="resource-card__availability-label">Disponibilità</span>
+              <ul class="resource-card__availability-list">
+                {{#each availabilitySummary}}
+                  <li>{{this}}</li>
+                {{/each}}
+              </ul>
+            </div>
+          {{/if}}
+
+          {{!-- Link alla scheda dettaglio della risorsa. --}}
+          <a class="resource-card__link" href="/resources/{{id}}">Apri scheda →</a>
+        </article>
+      {{/each}}
+    </div>
+  {{!-- Stato vuoto: mostrato quando non ci sono risorse attive nella categoria. --}}
+  {{else}}
+    <p class="empty-state">Nessuna risorsa attiva in questa categoria al momento.</p>
+  {{/if}}
+</main>

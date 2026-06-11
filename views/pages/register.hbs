@@ -1,0 +1,154 @@
+{{!--
+  Pagina di registrazione dell'applicazione UniBook.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express esegue
+  res.render('pages/register'), il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  La pagina mostra una card centrale con:
+    - il nome UniBook;
+    - il titolo "Crea il tuo account";
+    - il form di registrazione;
+    - il link alla pagina di login.
+
+  Il form invia i dati con metodo POST verso /register.
+  Quando l'utente preme "Crea account", il browser manda al backend:
+    - username;
+    - email;
+    - password;
+    - conferma password.
+
+  La rotta POST /register, definita in auth.routes.js, valida i dati ricevuti,
+  controlla che username ed email non siano già usati, crea l'hash della password
+  con bcrypt e inserisce il nuovo utente nel database tramite userRepo.
+
+  Il ruolo dell'utente non è presente nel form.
+  Questo è importante: un nuovo account creato dalla registrazione pubblica
+  nasce sempre come utente standard. Il ruolo viene deciso lato server, non dal
+  browser, così nessuno può auto-attribuirsi il ruolo admin modificando l'HTML o
+  la richiesta.
+
+  Se la validazione fallisce, il backend renderizza di nuovo questa pagina
+  passando:
+    - values, per ripopolare username ed email;
+    - errors, per mostrare messaggi vicino ai campi non validi.
+
+  Le password non vengono mai ripopolate nel template dopo un errore.
+  È una scelta di sicurezza: l'utente deve riscriverle.
+--}}
+
+{{!-- Contenitore principale della pagina di registrazione. --}}
+<main class="auth">
+  {{!-- Card centrale con titolo, form di registrazione e link al login. --}}
+  <section class="card">
+    <h1 class="card__brand">
+      <a href="/" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Crea il tuo account</h2>
+
+    {{!--
+  Form di registrazione.
+
+  method="post" invia i dati nel body della richiesta.
+  action="/register" collega il form alla rotta POST /register.
+  novalidate disattiva la validazione automatica del browser: la validazione
+  principale viene gestita lato server.
+--}}
+    <form method="post" action="/register" class="form" novalidate>
+      {{!--
+  Campo username.
+
+  Se la registrazione fallisce, viene ripopolato con values.username e mostra
+  errors.username se il backend ha segnalato un problema.
+--}}
+      <div class="form-field">
+        <label for="username" class="form-label">Username</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          class="form-input{{#if errors.username}} form-input--invalid{{/if}}"
+          value="{{values.username}}"
+          autocomplete="username"
+          minlength="3"
+          autofocus
+        />
+        {{#if errors.username}}
+          <p class="form-error">{{errors.username}}</p>
+        {{/if}}
+      </div>
+
+{{!--
+  Campo email.
+
+  Viene ripopolato con values.email dopo un errore, perché non è un dato
+  sensibile come la password.
+--}}
+      <div class="form-field">
+        <label for="email" class="form-label">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          class="form-input{{#if errors.email}} form-input--invalid{{/if}}"
+          value="{{values.email}}"
+          autocomplete="email"
+        />
+        {{#if errors.email}}
+          <p class="form-error">{{errors.email}}</p>
+        {{/if}}
+      </div>
+
+{{!--
+  Campo password.
+
+  Non contiene value: la password non viene mai reinserita automaticamente nel
+  template dopo un errore di registrazione.
+--}}
+      <div class="form-field">
+        <label for="password" class="form-label">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          class="form-input{{#if errors.password}} form-input--invalid{{/if}}"
+          autocomplete="new-password"
+          minlength="8"
+        />
+        {{#if errors.password}}
+          <p class="form-error">{{errors.password}}</p>
+        {{/if}}
+      </div>
+
+{{!--
+  Campo conferma password.
+
+  Serve al backend per verificare che l'utente abbia digitato correttamente la
+  password scelta. Anche questo campo non viene mai ripopolato.
+--}}
+      <div class="form-field">
+        <label for="passwordConfirm" class="form-label">Conferma password</label>
+        <input
+          id="passwordConfirm"
+          name="passwordConfirm"
+          type="password"
+          class="form-input{{#if errors.passwordConfirm}} form-input--invalid{{/if}}"
+          autocomplete="new-password"
+          minlength="8"
+        />
+        {{#if errors.passwordConfirm}}
+          <p class="form-error">{{errors.passwordConfirm}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Bottone che invia il form alla rotta POST /register. --}}
+      <button type="submit" class="btn btn--primary btn--block">Crea account</button>
+    </form>
+
+    {{!-- Link alternativo per utenti che hanno già un account. --}}
+    <p class="card__alt">
+      Hai già un account? <a href="/login">Accedi</a>
+    </p>
+  </section>
+</main>

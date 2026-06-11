@@ -1,0 +1,157 @@
+{{!--
+  Pagina dettaglio di una singola risorsa.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/resources/show, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  Questa pagina viene mostrata quando l'utente apre la scheda di una risorsa
+  specifica, per esempio tramite un URL come:
+
+    /resources/3
+
+  La rotta GET /resources/:id, definita in resources.routes.js, recupera dal
+  database la risorsa richiesta e passa al template tutti i dati necessari.
+
+  Le principali variabili ricevute dal backend sono:
+    - resource: dati della risorsa, come nome, tipo, capienza, posizione e
+      descrizione;
+    - typeLabel: nome leggibile della categoria al singolare;
+    - categoryLabel: nome leggibile della categoria al plurale;
+    - availability: disponibilità settimanale della risorsa;
+    - dayView: occupazione aggregata della risorsa nel giorno selezionato;
+    - minDate: data minima selezionabile nel form giornaliero.
+
+  La pagina è divisa in blocchi:
+    - intestazione con nome risorsa e badge categoria;
+    - dettagli principali della risorsa;
+    - descrizione, se presente;
+    - disponibilità settimanale;
+    - disponibilità e prenotazioni del giorno;
+    - pulsante per creare una prenotazione.
+
+  La sezione giornaliera è privacy-safe: mostra solo dati aggregati, come posti
+  occupati, capienza e stato degli slot, ma non mostra username o dati personali
+  degli utenti che hanno prenotato.
+
+  La disponibilità giornaliera viene renderizzata inizialmente lato server.
+  Inoltre, se JavaScript è attivo, public/js/resource-availability.js può
+  aggiornare la stessa sezione tramite fetch verso /api/availability quando
+  l'utente cambia data, senza ricaricare tutta la pagina.
+--}}
+
+{{!-- Contenitore principale della scheda risorsa. --}}
+<main class="page page--centered">
+  {{!-- Card ampia che racchiude tutti i dettagli della risorsa. --}}
+  <article class="card card--wide resource-show">
+    {{!-- Intestazione: link alla categoria, nome risorsa e badge tipologia. --}}
+    <header class="resource-show__head">
+      <a href="/resources?type={{resource.type}}" class="resource-show__back">← {{categoryLabel}}</a>
+      <div class="resource-show__title-row">
+        <h1 class="resource-show__title">{{resource.name}}</h1>
+        <span class="badge badge--{{resource.type}}">{{typeLabel}}</span>
+      </div>
+    </header>
+
+    {{!-- Dettagli principali della risorsa: categoria, capienza e posizione. --}}
+    <dl class="resource-show__details">
+      <div>
+        <dt>Categoria</dt>
+        <dd>{{typeLabel}}</dd>
+      </div>
+      <div>
+        <dt>Capienza</dt>
+        <dd>{{resource.capacity}}</dd>
+      </div>
+      <div>
+        <dt>Posizione</dt>
+        <dd>{{resource.location}}</dd>
+      </div>
+    </dl>
+
+    {{!-- Descrizione opzionale: viene mostrata solo se presente nel database. --}}
+    {{#if resource.description}}
+      <section class="resource-show__description">
+        <h2>Descrizione</h2>
+        <p>{{resource.description}}</p>
+      </section>
+    {{/if}}
+
+    {{!-- Disponibilità settimanale della risorsa, da lunedì a domenica. --}}
+    <section class="resource-show__availability">
+      <h2>Disponibilità settimanale</h2>
+      <ul class="weekly-summary">
+        {{!-- Ciclo Handlebars: ogni giorno della settimana genera una riga. --}}
+        {{#each availability}}
+          <li class="weekly-summary__row {{#unless is_open}}weekly-summary__row--closed{{/unless}}">
+            <span class="weekly-summary__day">{{dayName}}</span>
+            <span class="weekly-summary__time">
+              {{#if is_open}}{{opens_at}}–{{closes_at}}{{else}}chiusa{{/if}}
+            </span>
+          </li>
+        {{/each}}
+      </ul>
+      <p class="resource-show__availability-hint">
+        Gli intervalli prenotabili vanno a slot di 30 minuti.
+      </p>
+    </section>
+
+    {{!--
+      Sezione "Disponibilità e prenotazioni del giorno". I dati sono
+      aggregati (occupied/capacity per fascia) senza esporre alcun
+      dato personale.
+    --}}
+    <section class="resource-show__day" id="day-view"
+      data-resource-id="{{resource.id}}">
+      <h2>Disponibilità e prenotazioni del giorno</h2>
+
+      {{!--
+  Form per cambiare data.
+
+  Con method="get", la data selezionata viene aggiunta all'URL come query string.
+  Se JavaScript non è disponibile, il form ricarica la pagina lato server.
+--}}
+      <form method="get" action="/resources/{{resource.id}}" class="day-view__form">
+        <div class="form-field">
+          <label for="day-date" class="form-label">Data</label>
+          <input
+            id="day-date"
+            type="date"
+            name="date"
+            class="form-input"
+            min="{{minDate}}"
+            value="{{dayView.date}}"
+          />
+        </div>
+        <button type="submit" class="btn btn--secondary btn--small">Aggiorna</button>
+      </form>
+
+      {{!--
+  Pannello della disponibilità giornaliera.
+
+  Contiene il partial day-occupancy.hbs e può essere aggiornato via JavaScript
+  quando l'utente cambia data.
+--}}
+      <div id="day-view__panel" class="day-view__panel" aria-live="polite">
+        {{> day-occupancy dayView}}
+      </div>
+    </section>
+
+    {{!-- Azione finale: porta al form di prenotazione della risorsa corrente. --}}
+    <div class="resource-show__cta">
+      <a class="btn btn--primary" href="/bookings/new?resourceId={{resource.id}}">
+        Prenota questa risorsa
+      </a>
+    </div>
+  </article>
+</main>
+
+{{!--
+  Lo script lato client usa fetch su /api/availability per
+  aggiornare il pannello "day-view__panel" senza reload, sfruttando
+  lo stesso endpoint JSON anche per agganciare lo state al cambio
+  data. Se JS non funziona, il submit del form GET ricarica la
+  pagina con ?date=... e il server rende lo stesso markup.
+--}}
+<script defer src="/js/resource-availability.js"></script>

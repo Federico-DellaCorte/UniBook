@@ -1,0 +1,152 @@
+{{!--
+  Pagina admin di consultazione delle prenotazioni in vista calendario.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/bookings/calendar, il contenuto di questo file viene inserito
+  dentro {{{body}}} del layout principale main.hbs.
+
+  Questa pagina appartiene all'area amministrativa ed è accessibile solo agli
+  utenti con ruolo admin, perché la rotta è protetta da requireAdmin.
+
+  Lo scopo della pagina è mostrare le prenotazioni del sistema in forma
+  settimanale. A differenza della vista lista, qui l'admin può leggere le
+  prenotazioni distribuite giorno per giorno, in modo più visivo.
+
+  La pagina riceve dal backend:
+    - summary: riepilogo dei risultati filtrati;
+    - weekLabel: etichetta della settimana mostrata;
+    - tabs: URL per passare tra vista lista e vista calendario;
+    - filters: filtri attivi nella query string;
+    - periodOptions, typeOptions e resourceGroups: opzioni dei filtri;
+    - nav: URL per settimana precedente, settimana corrente e successiva;
+    - calendarDays: array dei sette giorni della settimana.
+
+  Ogni elemento di calendarDays rappresenta un giorno e può contenere una lista
+  di prenotazioni. Ogni prenotazione viene mostrata con orario, risorsa,
+  categoria, utente e stato.
+
+  I filtri usano method="get", quindi vengono conservati nella query string
+  dell'URL. Questo permette di ricaricare o condividere una vista calendario
+  mantenendo periodo, tipologia, risorsa e settimana selezionata.
+
+  Il calendario è realizzato con HTML e CSS Grid, senza librerie esterne.
+  La logica di selezione dei dati resta nel backend, mentre questo template si
+  occupa solo di presentarli.
+--}}
+
+{{!-- Contenitore principale della vista calendario admin. --}}
+<main class="page">
+  {{!-- Intestazione: ritorno alla dashboard, titolo, riepilogo e settimana mostrata. --}}
+  <header class="page-header">
+    <a href="/dashboard" class="page-header__back">← Dashboard</a>
+    <h1 class="page-header__title">Calendario prenotazioni</h1>
+    <p class="page-header__subtitle">{{summary}} · {{weekLabel}}</p>
+  </header>
+
+  {{!-- Tab per passare tra vista lista e vista calendario mantenendo i filtri. --}}
+  <nav class="tab-bar" role="tablist" aria-label="Vista prenotazioni">
+    <a class="tab-bar__link" href="{{tabs.listUrl}}" role="tab" aria-selected="false">
+      Vista lista
+    </a>
+    <a class="tab-bar__link tab-bar__link--active" href="{{tabs.calendarUrl}}" role="tab" aria-selected="true">
+      Vista calendario
+    </a>
+  </nav>
+
+  {{!--
+  Barra dei filtri della vista calendario.
+
+  Usa GET, quindi periodo, tipologia, risorsa e settimana vengono salvati
+  nella query string dell'URL.
+--}}
+  <form method="get" action="/admin/bookings" class="filter-bar">
+    {{!-- Campi hidden: mantengono attive la vista calendario e la settimana corrente. --}}
+    <input type="hidden" name="view" value="calendar">
+    <input type="hidden" name="week" value="{{filters.week}}">
+
+    {{!-- Filtro periodo: tutte, future attive oppure storico. --}}
+    <div class="form-field">
+      <label class="form-label" for="period">Periodo</label>
+      <select id="period" name="period" class="form-input">
+        {{#each periodOptions}}
+          <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    {{!-- Filtro per categoria di risorsa. --}}
+    <div class="form-field">
+      <label class="form-label" for="type">Tipologia</label>
+      <select id="type" name="type" class="form-input">
+        {{#each typeOptions}}
+          <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    {{!-- Filtro per singola risorsa, con opzioni raggruppate per categoria. --}}
+    <div class="form-field">
+      <label class="form-label" for="resourceId">Risorsa</label>
+      <select id="resourceId" name="resourceId" class="form-input">
+        <option value="">Tutte le risorse</option>
+        {{#each resourceGroups}}
+          <optgroup label="{{label}}">
+            {{#each items}}
+              <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+            {{/each}}
+          </optgroup>
+        {{/each}}
+      </select>
+    </div>
+
+    {{!-- Azioni del filtro: applicare i criteri scelti oppure pulire la ricerca. --}}
+    <div class="filter-bar__actions">
+      <button type="submit" class="btn btn--primary btn--small">Applica filtri</button>
+      <a class="btn btn--secondary btn--small" href="{{tabs.calendarUrl}}">Pulisci</a>
+    </div>
+  </form>
+
+  {{!-- Navigazione tra settimana precedente, settimana corrente e settimana successiva. --}}
+  <nav class="calendar-nav" aria-label="Navigazione settimane">
+    <a class="btn btn--secondary btn--small" href="{{nav.prevWeekUrl}}">← Settimana precedente</a>
+    <a class="btn btn--secondary btn--small" href="{{nav.todayWeekUrl}}">Oggi</a>
+    <a class="btn btn--secondary btn--small" href="{{nav.nextWeekUrl}}">Settimana successiva →</a>
+  </nav>
+
+  {{!-- Griglia settimanale del calendario: contiene i sette giorni della settimana. --}}
+  <div class="calendar-grid">
+    {{!-- Ciclo sui giorni della settimana preparati dal backend. --}}
+    {{#each calendarDays}}
+      {{!-- Colonna/blocco del singolo giorno, evidenziato se corrisponde a oggi. --}}
+      <section class="calendar-day{{#if isToday}} calendar-day--today{{/if}}" aria-label="{{dayLong}} {{labelFull}}">
+        <header class="calendar-day__head">
+          <span class="calendar-day__name">{{dayLong}}</span>
+          <span class="calendar-day__date">{{label}}</span>
+        </header>
+        {{!-- Se il giorno contiene prenotazioni, mostro la lista degli eventi. --}}
+        {{#if items.length}}
+        {{!-- Lista delle prenotazioni presenti in questo giorno. --}}
+          <ul class="calendar-day__items">
+            {{!-- Ciclo sulle prenotazioni del giorno. --}}
+            {{#each items}}
+            {{!-- Card compatta della prenotazione, con stile legato allo stato. --}}
+              <li class="calendar-item calendar-item--{{statusKey}}">
+                <p class="calendar-item__time">{{start_time}}–{{end_time}}</p>
+                <p class="calendar-item__resource">
+                  <span class="badge badge--{{resource_type}}">{{typeLabel}}</span>
+                  {{resource_name}}
+                </p>
+                <p class="calendar-item__user">{{user_username}}</p>
+                <span class="status-badge status-badge--{{statusKey}}">{{statusLabel}}</span>
+              </li>
+            {{/each}}
+          </ul>
+        {{!-- Giorno senza prenotazioni: mostro un segnaposto vuoto. --}}
+        {{else}}
+          <p class="calendar-day__empty">—</p>
+        {{/if}}
+      </section>
+    {{/each}}
+  </div>
+</main>

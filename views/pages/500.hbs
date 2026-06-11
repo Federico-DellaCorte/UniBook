@@ -1,0 +1,57 @@
+{{!--
+  Pagina di errore 500 dell'applicazione UniBook.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  l'errore 500, il contenuto di questo file viene inserito dentro {{{body}}}
+  del layout principale main.hbs.
+
+  L'errore 500 significa "Internal Server Error", cioè errore interno del server.
+  Viene mostrato quando una route, un middleware, un service o una query genera
+  un errore inatteso durante l'elaborazione della richiesta.
+
+  Questa pagina viene renderizzata dal middleware di gestione errori definito in
+  server.js. In Express un middleware di errore si riconosce perché ha quattro
+  parametri: err, req, res e next.
+
+  L'utente vede un messaggio generico e non i dettagli tecnici dell'errore.
+  Questa è una scelta corretta per due motivi:
+    - evita di confondere l'utente con stack trace o messaggi tecnici;
+    - evita di esporre informazioni sensibili, come percorsi di file, dettagli
+      SQL o struttura interna del progetto.
+
+  I dettagli dell'errore, se servono per il debug, vengono gestiti lato server
+  tramite log, non mostrati nella pagina HTML.
+
+  La pagina usa anche currentUser:
+    - se currentUser esiste, viene mostrato il link alla dashboard;
+    - se currentUser non esiste, viene mostrato solo il ritorno alla home.
+--}}
+
+{{!-- Contenitore principale della pagina di errore. --}}
+<main class="dashboard">
+  {{!-- Card centrale con codice errore, messaggio generico e azioni di recupero. --}}
+  <section class="card card--wide error-card">
+    <h1 class="card__brand">
+      <a href="/" class="card__brand-link">UniBook</a>
+    </h1>
+    {{!-- Codice HTTP dell'errore: 500 indica un errore interno del server. --}}
+    <p class="error-card__code">500</p>
+    <h2 class="card__title">Si è verificato un errore</h2>
+    {{!-- Messaggio generico: non espone dettagli tecnici dell'errore all'utente. --}}
+    <p class="card__lead">
+      Qualcosa è andato storto mentre il server stava elaborando
+      la tua richiesta. Il problema è già stato segnalato; nel
+      frattempo puoi riprovare oppure tornare alla home.
+    </p>
+      
+    {{!-- Azioni di recupero: permettono all'utente di uscire dalla pagina di errore. --}}
+    <div class="card__actions">
+      <a class="btn btn--primary" href="/">Torna alla home</a>
+      {{!-- Se l'utente è loggato, propongo anche il ritorno alla dashboard. --}}
+      {{#if currentUser}}
+        <a class="btn btn--secondary" href="/dashboard">Vai alla dashboard</a>
+      {{/if}}
+    </div>
+  </section>
+</main>

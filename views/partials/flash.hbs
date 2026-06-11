@@ -1,0 +1,58 @@
+{{!--
+  Partial per mostrare i messaggi flash.
+
+  Questo file è un partial Handlebars, cioè un frammento di template
+  riutilizzabile. Non rappresenta una pagina completa, ma un blocco di HTML
+  che viene incluso dentro il layout principale main.hbs tramite:
+
+    {{> flash}}
+
+  I messaggi flash sono notifiche temporanee generate dal backend dopo
+  un'azione dell'utente. Per esempio:
+    - login riuscito;
+    - prenotazione creata;
+    - errore di accesso;
+    - risorsa non trovata;
+    - logout effettuato.
+
+  Il backend salva questi messaggi nella sessione e il middleware flash.js li
+  rende disponibili ai template dentro la variabile:
+
+    flash
+
+  Qui il partial controlla tre categorie di messaggi:
+    - flash.success → messaggi positivi;
+    - flash.error   → messaggi di errore;
+    - flash.info    → messaggi informativi/neutri.
+
+  La sintassi {{#each ...}} è Handlebars e significa:
+  "per ogni elemento dentro questa lista, genera questo blocco HTML".
+
+  Dentro ogni ciclo, {{this}} rappresenta il singolo messaggio corrente.
+  Per esempio, se flash.success contiene "Accesso effettuato correttamente",
+  {{this}} verrà sostituito con quel testo.
+
+  Il contenitore esterno flash-container rimane sempre presente nella pagina.
+  Se non ci sono messaggi, il CSS può nasconderlo automaticamente, evitando
+  spazi vuoti inutili.
+
+  Gli attributi role migliorano l'accessibilità:
+    - role="status" per messaggi non urgenti, come success e info;
+    - role="alert" per errori, che devono essere annunciati subito dai lettori
+      di schermo.
+
+  Le classi CSS flash, flash--success, flash--error e flash--info non hanno
+  logica da sole: servono al file styles.css per dare colori, spaziatura e
+  aspetto grafico diverso ai vari tipi di messaggio.
+--}}
+<div class="flash-container">
+  {{#each flash.success}}
+    <div class="flash flash--success" role="status">{{this}}</div>
+  {{/each}}
+  {{#each flash.error}}
+    <div class="flash flash--error" role="alert">{{this}}</div>
+  {{/each}}
+  {{#each flash.info}}
+    <div class="flash flash--info" role="status">{{this}}</div>
+  {{/each}}
+</div>

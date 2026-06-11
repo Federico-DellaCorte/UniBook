@@ -1,0 +1,88 @@
+{{!--
+  Dashboard dell'utente autenticato.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza la
+  dashboard, il contenuto di questo file viene inserito dentro {{{body}}} del
+  layout principale main.hbs.
+
+  La pagina è accessibile solo agli utenti autenticati, perché la rotta della
+  dashboard è protetta dal middleware requireAuth. Per questo il template può
+  usare currentUser sapendo che esiste un utente loggato.
+
+  currentUser viene preparato lato backend dal middleware currentUser.js e
+  contiene informazioni sull'utente, come username, email e ruolo.
+
+  La dashboard usa anche la variabile isAdmin.
+  Questa variabile serve a capire se l'utente corrente è amministratore oppure
+  utente standard, e permette di mostrare azioni diverse.
+
+  Se isAdmin è vero, la dashboard mostra:
+    - accesso alla gestione delle risorse;
+    - accesso alla consultazione di tutte le prenotazioni.
+
+  Se isAdmin è falso, la dashboard mostra:
+    - accesso alle risorse disponibili;
+    - accesso alle proprie prenotazioni.
+
+  Il logout viene gestito con un form POST verso /logout.
+  È corretto usare POST perché il logout modifica lo stato della sessione:
+  non è una semplice visualizzazione di pagina.
+--}}
+
+{{!-- Contenitore principale della dashboard. --}}
+<main class="dashboard">
+  {{!-- Card centrale con saluto, azioni disponibili e logout. --}}
+  <section class="card card--wide">
+    <h1 class="card__brand">
+      <a href="/" class="card__brand-link">UniBook</a>
+    </h1>
+    {{!-- Saluto personalizzato: currentUser.username arriva dal backend. --}}
+    <h2 class="card__title">Ciao, {{currentUser.username}}</h2>
+
+    {{!-- Blocco mostrato solo agli utenti amministratori. --}}
+    {{#if isAdmin}}
+      <p class="card__lead">
+        Hai effettuato l'accesso come <strong>amministratore</strong>.
+        Da qui puoi gestire le risorse universitarie e consultare
+        tutte le prenotazioni del sistema.
+      </p>
+
+      {{!-- Azioni principali dell'admin: gestione risorse e consultazione prenotazioni. --}}
+      <div class="dashboard-cta-group">
+        <a class="dashboard-cta" href="/admin/resources">
+          <span class="dashboard-cta__title">Gestione risorse</span>
+          <span class="dashboard-cta__hint">Aule, sale, laboratori, postazioni e attrezzature</span>
+        </a>
+        <a class="dashboard-cta" href="/admin/bookings">
+          <span class="dashboard-cta__title">Tutte le prenotazioni</span>
+          <span class="dashboard-cta__hint">Elenco completo con filtri per periodo e risorsa</span>
+        </a>
+      </div>
+    {{!-- Blocco mostrato agli utenti standard. --}}
+    {{else}}
+      <p class="card__lead">
+        Hai effettuato l'accesso come <strong>utente standard</strong>.
+        Da qui puoi sfogliare le risorse disponibili e consultare le
+        tue prenotazioni.
+      </p>
+
+{{!-- Azioni principali dell'utente: consultare risorse e prenotazioni personali. --}}
+      <div class="dashboard-cta-group">
+        <a class="dashboard-cta" href="/resources">
+          <span class="dashboard-cta__title">Risorse disponibili</span>
+          <span class="dashboard-cta__hint">Aule, sale, laboratori, postazioni e attrezzature</span>
+        </a>
+        <a class="dashboard-cta" href="/bookings/mine">
+          <span class="dashboard-cta__title">Le mie prenotazioni</span>
+          <span class="dashboard-cta__hint">Prossime prenotazioni e storico</span>
+        </a>
+      </div>
+    {{/if}}
+
+    {{!-- Form di logout: usa POST perché chiudere la sessione modifica lo stato utente. --}}
+    <form method="post" action="/logout" class="card__actions">
+      <button type="submit" class="btn btn--secondary">Esci</button>
+    </form>
+  </section>
+</main>

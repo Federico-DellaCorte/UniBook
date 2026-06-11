@@ -1,0 +1,151 @@
+{{!--
+  Pagina elenco risorse di una categoria lato amministratore.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/resources/list, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  Questa pagina viene mostrata quando l'admin seleziona una categoria dalla
+  gestione risorse, per esempio:
+
+    /admin/resources?type=aula
+
+  A differenza della lista lato utente, qui vengono mostrate sia le risorse
+  attive sia quelle disattivate. Questo è necessario perché l'amministratore
+  deve poter controllare, modificare, riattivare o eliminare anche risorse non
+  più visibili agli utenti standard.
+
+  Le principali variabili ricevute dal backend sono:
+    - categoryLabel: nome leggibile della categoria;
+    - type: valore tecnico della categoria, usato negli URL;
+    - stats: conteggi totali, attivi e disattivati;
+    - resources: elenco delle risorse della categoria;
+    - availabilitySummary: sintesi della disponibilità settimanale di ogni risorsa.
+
+  Ogni risorsa viene mostrata come card con:
+    - nome;
+    - stato attiva/disattivata;
+    - capienza;
+    - posizione;
+    - descrizione eventuale;
+    - disponibilità settimanale sintetica;
+    - azioni amministrative.
+
+  Le azioni disponibili sono:
+    - Modifica;
+    - Disattiva, se la risorsa è attiva;
+    - Riattiva, se la risorsa è disattivata;
+    - Elimina.
+
+  Le azioni che modificano il database vengono inviate con form POST, non con
+  semplici link GET. Questo è corretto perché modificare, disattivare,
+  riattivare o eliminare una risorsa cambia lo stato del sistema.
+
+  Per disattivazione ed eliminazione, la rotta admin decide se eseguire subito
+  l'azione oppure mostrare una pagina di conferma intermedia quando esistono
+  prenotazioni future confermate coinvolte.
+--}}
+
+{{!-- Contenitore principale della lista admin delle risorse. --}}
+<main class="page">
+  {{!-- Intestazione: ritorno alle categorie, titolo, nuova risorsa e statistiche. --}}
+  <header class="page-header">
+    <a href="/admin/resources" class="page-header__back">← Categorie</a>
+    <div class="page-header__row">
+      <h1 class="page-header__title">{{categoryLabel}}</h1>
+      <a class="btn btn--primary btn--small" href="/admin/resources/new?type={{type}}">+ Nuova risorsa</a>
+    </div>
+    <p class="page-header__subtitle">
+      {{stats.total}} totali · {{stats.active}} attive · {{stats.inactive}} disattivate
+    </p>
+  </header>
+
+  {{!-- Se esistono risorse nella categoria, mostro la griglia delle card. --}}
+  {{#if resources.length}}
+    {{!-- Griglia delle risorse amministrabili della categoria selezionata. --}}
+    <div class="resource-grid">
+      {{!-- Ciclo sulle risorse: ogni elemento genera una card amministrativa. --}}
+      {{#each resources}}
+        {{!-- Card della risorsa: se non è attiva riceve anche la classe inactive. --}}
+        <article class="resource-card {{#unless active}}resource-card--inactive{{/unless}}">
+          {{!-- Testata della card: nome risorsa e badge dello stato. --}}
+          <header class="resource-card__head">
+            <h2 class="resource-card__title">{{name}}</h2>
+            {{#if active}}
+              <span class="status-badge status-badge--active">Attiva</span>
+            {{else}}
+              <span class="status-badge status-badge--inactive">Disattivata</span>
+            {{/if}}
+          </header>
+          {{!-- Metadati principali della risorsa: capienza e posizione. --}}
+          <dl class="resource-card__meta">
+            <div>
+              <dt>Capienza</dt>
+              <dd>{{capacity}}</dd>
+            </div>
+            <div>
+              <dt>Posizione</dt>
+              <dd>{{location}}</dd>
+            </div>
+          </dl>
+          {{!-- Descrizione opzionale: viene mostrata solo se presente. --}}
+          {{#if description}}
+            <p class="resource-card__description">{{description}}</p>
+          {{/if}}
+
+          {{!--
+            Sintesi compatta della disponibilità settimanale. Le
+            righe sono già raggruppate (giorni consecutivi con stesso
+            orario producono un'unica voce, es. "Lun–Ven 08:00–22:00")
+            lato server in admin.resources.routes.js.
+          --}}
+          {{#if availabilitySummary.length}}
+            {{!-- Azioni amministrative disponibili sulla singola risorsa. --}}
+            <div class="resource-card__availability">
+              <span class="resource-card__availability-label">Disponibilità</span>
+              <ul class="resource-card__availability-list">
+                {{#each availabilitySummary}}
+                  <li>{{this}}</li>
+                {{/each}}
+              </ul>
+            </div>
+          {{/if}}
+
+          <div class="resource-actions">
+            {{!-- Link al form di modifica della risorsa. --}}
+            <a class="btn btn--secondary btn--small" href="/admin/resources/{{id}}/edit">Modifica</a>
+            {{!-- Risorsa attiva: l'admin può disattivarla. --}}
+            {{#if active}}
+              {{!--
+  Disattivazione tramite POST.
+  La rotta deciderà se eseguire subito o mostrare una conferma intermedia.
+--}}
+              <form method="post" action="/admin/resources/{{id}}/deactivate" class="resource-actions__form">
+                <button type="submit" class="btn btn--danger btn--small">Disattiva</button>
+              </form>
+            {{!-- Risorsa disattivata: l'admin può riattivarla. --}}
+            {{else}}
+              {{!-- Riattivazione: POST diretto, è un'azione non distruttiva. --}}
+              <form method="post" action="/admin/resources/{{id}}/reactivate" class="resource-actions__form">
+                <button type="submit" class="btn btn--primary btn--small">Riattiva</button>
+              </form>
+            {{/if}}
+            {{!--
+              Eliminazione definitiva: POST diretto. Stesso pattern
+              "smart confirm" della disattivazione: la rotta mostra
+              la pagina di conferma solo se ci sono prenotazioni
+              future confermate.
+            --}}
+            <form method="post" action="/admin/resources/{{id}}/delete" class="resource-actions__form">
+              <button type="submit" class="btn btn--danger-strong btn--small">Elimina</button>
+            </form>
+          </div>
+        </article>
+      {{/each}}
+    </div>
+  {{!-- Stato vuoto: mostrato quando la categoria non contiene ancora risorse. --}}
+  {{else}}
+    <p class="empty-state">Nessuna risorsa in questa categoria. Puoi aggiungerne una con il pulsante in alto.</p>
+  {{/if}}
+</main>

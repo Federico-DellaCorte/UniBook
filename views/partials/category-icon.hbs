@@ -1,0 +1,84 @@
+{{!--
+  Partial per mostrare l'icona associata a una categoria di risorsa.
+
+  Questo file è un partial Handlebars: non è una pagina completa, ma un piccolo
+  blocco riutilizzabile che può essere incluso dentro altre view.
+
+  Serve a mostrare un'icona diversa in base al tipo di risorsa:
+    - aula;
+    - sala;
+    - laboratorio;
+    - postazione;
+    - attrezzatura.
+
+  Il partial riceve dal template chiamante una variabile chiamata "type".
+  Per esempio, se type vale "aula", viene mostrata l'icona dell'aula.
+  Se type vale "laboratorio", viene mostrata l'icona del laboratorio.
+
+  Le icone sono SVG inline.
+  SVG significa Scalable Vector Graphics: è un formato che permette di disegnare
+  forme vettoriali direttamente dentro l'HTML. A differenza di un'immagine PNG o
+  JPG, un SVG può essere ingrandito senza perdere qualità.
+
+  Ogni blocco usa la sintassi Handlebars:
+
+    {{#if (eq type "aula")}}
+      ...
+    {{/if}}
+
+  Questo significa:
+  "se la variabile type è uguale ad aula, allora mostra questo SVG".
+
+  L'helper eq è stato registrato in server.js e permette di confrontare due
+  valori dentro un template Handlebars. Senza questo helper, Handlebars non
+  avrebbe un confronto diretto del tipo type == "aula".
+
+  Gli SVG usano stroke="currentColor".
+  Questo significa che il colore dell'icona non è scritto direttamente qui,
+  ma viene ereditato dal colore CSS dell'elemento contenitore. In questo modo
+  la stessa icona può cambiare colore automaticamente in base alla card o alla
+  sezione in cui viene mostrata.
+
+  aria-hidden="true" e focusable="false" indicano che l'icona è decorativa.
+  I lettori di schermo non devono leggerla, perché il significato della categoria
+  è già comunicato dal testo della card o della pagina.
+--}}
+{{#if (eq type "aula")}}
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <rect x="3" y="4" width="18" height="11" rx="1.5"/>
+    <line x1="7" y1="8" x2="17" y2="8"/>
+    <line x1="7" y1="11" x2="13" y2="11"/>
+    <line x1="12" y1="15" x2="12" y2="20"/>
+    <line x1="9" y1="20" x2="15" y2="20"/>
+  </svg>
+{{/if}}
+{{#if (eq type "sala")}}
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <circle cx="8" cy="8" r="3"/>
+    <path d="M3 19c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
+    <circle cx="17" cy="9" r="2.5"/>
+    <path d="M14 18c.7-1.8 2.5-3 4.5-3 1.5 0 2.9.8 3.5 2"/>
+  </svg>
+{{/if}}
+{{#if (eq type "laboratorio")}}
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <path d="M9 3v6l-5 9.5A1.5 1.5 0 0 0 5.3 21h13.4a1.5 1.5 0 0 0 1.3-2.5L15 9V3"/>
+    <line x1="7.5" y1="3" x2="16.5" y2="3"/>
+    <line x1="7" y1="15" x2="17" y2="15"/>
+  </svg>
+{{/if}}
+{{#if (eq type "postazione")}}
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <rect x="3" y="4" width="18" height="12" rx="1.5"/>
+    <line x1="3" y1="13" x2="21" y2="13"/>
+    <line x1="9" y1="20" x2="15" y2="20"/>
+    <line x1="12" y1="16" x2="12" y2="20"/>
+  </svg>
+{{/if}}
+{{#if (eq type "attrezzatura")}}
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <rect x="3" y="8" width="18" height="13" rx="1.5"/>
+    <path d="M8 8V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/>
+    <line x1="3" y1="13" x2="21" y2="13"/>
+  </svg>
+{{/if}}

@@ -1,0 +1,63 @@
+{{!--
+  Pagina indice delle categorie di risorse lato amministratore.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/resources/categories, il contenuto di questo file viene inserito
+  dentro {{{body}}} del layout principale main.hbs.
+
+  Questa pagina appartiene all'area admin delle risorse. A differenza della
+  pagina categorie lato utente, qui l'amministratore non vede solo le risorse
+  disponibili agli utenti finali, ma una panoramica gestionale di tutte le
+  categorie.
+
+  Le categorie arrivano dal backend tramite la variabile categories, preparata
+  in admin.resources.routes.js con buildAdminCategoryStats().
+
+  Ogni elemento di categories contiene:
+    - type: valore tecnico della categoria, usato nell'URL;
+    - labelPlural: nome della categoria mostrato nella card;
+    - countText: numero totale di risorse della categoria;
+    - activeText: numero di risorse attualmente attive.
+
+  Cliccando una card, l'admin viene portato a:
+
+    /admin/resources?type=<categoria>
+
+  dove può vedere l'elenco completo delle risorse di quella categoria, incluse
+  quelle disattivate. Da lì potrà creare, modificare, disattivare, riattivare
+  o eliminare risorse.
+
+  Le icone vengono mostrate tramite il partial category-icon.hbs, lo stesso
+  usato anche nelle pagine lato utente. In questo modo le categorie mantengono
+  la stessa identità visiva in tutta l'applicazione.
+--}}
+
+{{!-- Contenitore principale della pagina gestione risorse. --}}
+<main class="page">
+  {{!-- Intestazione admin: ritorno alla dashboard, titolo e descrizione della sezione. --}}
+  <header class="page-header">
+    <a href="/dashboard" class="page-header__back">← Dashboard</a>
+    <h1 class="page-header__title">Gestione risorse</h1>
+    <p class="page-header__subtitle">Scegli una categoria per visualizzare, creare, modificare o disattivare le risorse.</p>
+  </header>
+
+  {{!-- Griglia delle categorie gestibili dall'amministratore. --}}
+  <div class="category-grid">
+    {{!-- Ciclo sulle categorie preparate dal backend: ogni categoria genera una card. --}}
+    {{#each categories}}
+    {{!-- Card cliccabile: apre la gestione admin delle risorse della categoria scelta. --}}
+      <a class="category-card" href="/admin/resources?type={{type}}">
+        {{!-- Icona della categoria, renderizzata tramite il partial category-icon.hbs. --}}
+        <span class="category-card__icon category-card__icon--{{type}}">
+          {{> category-icon}}
+        </span>
+        {{!-- Corpo della card: mostra nome categoria, totale risorse e risorse attive. --}}
+        <div class="category-card__body">
+          <h2 class="category-card__title">{{labelPlural}}</h2>
+          <p class="category-card__count">{{countText}} · {{activeText}}</p>
+        </div>
+      </a>
+    {{/each}}
+  </div>
+</main>

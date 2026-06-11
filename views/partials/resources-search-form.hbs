@@ -1,0 +1,284 @@
+{{!--
+  Partial del form di ricerca delle risorse.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  Non è una pagina completa, ma un partial: viene incluso dentro altre pagine,
+  per esempio la pagina indice delle risorse e la pagina dei risultati di ricerca.
+
+  Il suo compito è mostrare all'utente un form con cui filtrare le risorse
+  prenotabili.
+
+  I filtri disponibili sono:
+    - tipologia della risorsa;
+    - data;
+    - ora di inizio;
+    - ora di fine;
+    - capienza minima;
+    - parola chiave o caratteristica.
+
+  Il form usa method="get" e action="/resources".
+  Questo significa che, quando l'utente preme "Cerca", i dati non vengono inviati
+  nel body della richiesta, ma vengono aggiunti all'URL come query string.
+
+  Esempio:
+    /resources?type=aula&date=2026-06-05&start=09:00&end=11:00
+
+  Questo è utile perché la ricerca diventa copiabile, condivisibile e
+  ricaricabile dal browser senza perdere i filtri.
+
+  Le variabili Handlebars usate nel form arrivano dalla rotta resources.routes.js:
+    - values contiene i valori attualmente inseriti dall'utente;
+    - errors contiene eventuali errori di validazione;
+    - typeOptions contiene le opzioni della tipologia;
+    - startSlots contiene gli orari validi come ora di inizio;
+    - endSlots contiene gli orari validi come ora di fine;
+    - minDate contiene la data minima selezionabile.
+
+  Il form funziona anche senza JavaScript: la ricerca viene elaborata lato server.
+  JavaScript può migliorare l'esperienza utente, ma non è necessario per usare
+  questa ricerca.
+--}}
+
+{{!--
+  Form HTML della ricerca.
+
+  method="get" indica che i valori del form vengono messi nella query string
+  dell'URL.
+
+  action="/resources" indica che la richiesta viene inviata alla rotta
+  GET /resources, gestita da resources.routes.js.
+
+  class="resource-search" serve al CSS per applicare lo stile grafico del form.
+--}}
+<form method="get" action="/resources" class="resource-search">
+  {{!--
+  Intestazione del form.
+
+  Contiene il titolo visibile all'utente e una breve spiegazione di cosa può
+  fare la ricerca.
+  --}}
+  <div class="resource-search__title">
+    <h2>Cerca una risorsa disponibile</h2>
+    <p class="resource-search__hint">
+      Combina i filtri per trovare risorse compatibili con tipologia,
+      orario, capienza o caratteristiche specifiche.
+    </p>
+  </div>
+
+  {{!--
+  Griglia dei campi di ricerca.
+
+  Ogni filtro è contenuto in un blocco form-field.
+  Il CSS usa questa struttura per disporre i campi in modo ordinato nella pagina.
+  --}}
+  <div class="resource-search__grid">
+
+    {{!--
+  Filtro per tipologia di risorsa.
+
+  Il campo select permette all'utente di scegliere una categoria:
+  aula, sala, laboratorio, postazione, attrezzatura oppure tutte.
+
+  Le opzioni non sono scritte manualmente qui: arrivano da typeOptions,
+  preparato dalla rotta lato server.
+
+  {{#each typeOptions}} è un ciclo Handlebars:
+  per ogni opzione viene generato un tag <option>.
+
+  Se selected è true, viene aggiunto l'attributo selected, così quando la pagina
+  viene ricaricata dopo una ricerca resta selezionata la tipologia scelta.
+--}}
+    <div class="form-field">
+      <label class="form-label" for="search-type">Tipologia</label>
+      <select id="search-type" name="type" class="form-input">
+        {{#each typeOptions}}
+          <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    {{!--
+  Filtro per data.
+
+  Questo input è di tipo date, quindi il browser mostra un selettore calendario.
+
+  name="date" è importante perché determina il nome del parametro nella query
+  string. Quando l'utente invia il form, la rotta leggerà questo valore come
+  req.query.date.
+
+  min="{{minDate}}" impedisce di selezionare date precedenti a quella minima
+  calcolata dal backend, di solito la data odierna.
+
+  value="{{values.date}}" mantiene nel campo la data già scelta dall'utente
+  dopo l'invio della ricerca.
+
+  Se errors.date esiste, viene aggiunta la classe form-input--invalid e viene
+  mostrato il messaggio di errore sotto al campo.
+--}}
+    <div class="form-field">
+      <label class="form-label" for="search-date">Data</label>
+      <input
+        id="search-date"
+        type="date"
+        name="date"
+        class="form-input{{#if errors.date}} form-input--invalid{{/if}}"
+        min="{{minDate}}"
+        value="{{values.date}}"
+      />
+      {{#if errors.date}}<p class="form-error">{{errors.date}}</p>{{/if}}
+    </div>
+
+    {{!--
+  Filtro per ora di inizio.
+
+  Questo select contiene gli orari validi come inizio della fascia cercata.
+  Gli orari arrivano da startSlots, preparato dal backend usando dateTime.js.
+
+  Gli start slot vanno da 00:00 a 23:30, a passi di 30 minuti.
+  24:00 non è ammesso come ora di inizio, perché rappresenta solo la fine
+  della giornata.
+
+  L'opzione "Qualsiasi" ha value="".
+  Se l'utente lascia questo campo vuoto, la ricerca non applica un filtro
+  specifico sull'ora di inizio.
+
+  {{#each startSlots}} genera una option per ogni orario disponibile.
+  La condizione {{#if (eq this ../values.start)}} serve a mantenere selezionato
+  l'orario scelto dopo il ricaricamento della pagina.
+
+  Il simbolo ../ permette di uscire dal contesto del ciclo e leggere values.start
+  dal contesto esterno.
+--}}
+    <div class="form-field">
+      <label class="form-label" for="search-start">Ora inizio</label>
+      <select
+        id="search-start"
+        name="start"
+        class="form-input{{#if errors.start}} form-input--invalid{{/if}}"
+      >
+        <option value="" {{#unless values.start}}selected{{/unless}}>Qualsiasi</option>
+        {{#each startSlots}}
+          <option value="{{this}}" {{#if (eq this ../values.start)}}selected{{/if}}>{{this}}</option>
+        {{/each}}
+      </select>
+      {{#if errors.start}}<p class="form-error">{{errors.start}}</p>{{/if}}
+    </div>
+
+    {{!--
+  Filtro per ora di fine.
+
+  Questo select contiene gli orari validi come fine della fascia cercata.
+  Gli orari arrivano da endSlots.
+
+  Gli end slot vanno da 00:30 a 24:00, a passi di 30 minuti.
+  24:00 è ammesso qui perché rappresenta la fine della giornata.
+
+  Anche qui l'opzione "Qualsiasi" lascia il campo vuoto.
+
+  La ricerca per fascia oraria si attiva solo se data, ora inizio e ora fine
+  sono compilate insieme. Se manca uno di questi tre elementi, la rotta mostra
+  un errore o tratta la ricerca in modo meno specifico.
+--}}
+    <div class="form-field">
+      <label class="form-label" for="search-end">Ora fine</label>
+      {{!-- 00:30..23:30 + 24:00. Coerente con isValidEndSlot. --}}
+      <select
+        id="search-end"
+        name="end"
+        class="form-input{{#if errors.end}} form-input--invalid{{/if}}"
+      >
+        <option value="" {{#unless values.end}}selected{{/unless}}>Qualsiasi</option>
+        {{#each endSlots}}
+          <option value="{{this}}" {{#if (eq this ../values.end)}}selected{{/if}}>{{this}}</option>
+        {{/each}}
+      </select>
+      {{#if errors.end}}<p class="form-error">{{errors.end}}</p>{{/if}}
+    </div>
+
+    {{!--
+  Filtro per capienza minima.
+
+  Questo input è di tipo number, quindi accetta valori numerici.
+  Permette all'utente di cercare risorse con almeno un certo numero di posti.
+
+  name="minCapacity" determina il parametro letto dalla rotta come
+  req.query.minCapacity.
+
+  min="1" e step="1" indicano al browser che il valore deve essere un intero
+  positivo.
+
+  La validazione vera resta comunque lato server, perché i controlli del browser
+  possono essere aggirati.
+--}}
+    <div class="form-field">
+      <label class="form-label" for="search-min">Capienza minima</label>
+      <input
+        id="search-min"
+        type="number"
+        min="1"
+        step="1"
+        name="minCapacity"
+        class="form-input{{#if errors.minCapacity}} form-input--invalid{{/if}}"
+        value="{{values.minCapacity}}"
+        placeholder="es. 20"
+      />
+      {{#if errors.minCapacity}}<p class="form-error">{{errors.minCapacity}}</p>{{/if}}
+    </div>
+
+    {{!--
+  Filtro testuale libero.
+
+  Questo campo permette di cercare una parola chiave nel nome, nella posizione
+  o nella descrizione della risorsa.
+
+  Esempi:
+    - wifi;
+    - proiettore;
+    - edificio A;
+    - laboratorio.
+
+  La classe form-field--wide indica al CSS che questo campo deve occupare più
+  spazio nella griglia rispetto ai campi più piccoli.
+--}}
+    <div class="form-field form-field--wide">
+      <label class="form-label" for="search-q">Parola chiave / caratteristiche</label>
+      <input
+        id="search-q"
+        type="text"
+        name="q"
+        class="form-input"
+        value="{{values.q}}"
+        placeholder="es. wifi, edificio 5, proiettore…"
+      />
+    </div>
+  </div>
+
+  {{!--
+  Azioni del form.
+
+  Il bottone "Cerca" invia il form alla rotta /resources usando GET.
+
+  Il link "Pulisci" riporta a /resources senza query string, quindi rimuove tutti
+  i filtri e torna alla pagina iniziale delle categorie.
+--}}
+  <div class="resource-search__actions">
+    <button type="submit" class="btn btn--primary btn--small">Cerca</button>
+    <a href="/resources" class="btn btn--secondary btn--small">Pulisci</a>
+  </div>
+
+  {{!--
+  Nota esplicativa sotto al form.
+
+  Spiega all'utente una regola importante: la ricerca per fascia oraria funziona
+  solo quando data, ora inizio e ora fine sono compilate insieme.
+
+  Spiega anche che la capienza residua tiene conto delle prenotazioni già
+  confermate nello stesso intervallo.
+--}}
+  <p class="resource-search__hint resource-search__hint--small">
+    La ricerca per fascia oraria si attiva solo quando data,
+    ora inizio e ora fine sono compilati insieme. La capienza
+    residua tiene conto delle prenotazioni già confermate nello
+    stesso intervallo.
+  </p>
+</form>

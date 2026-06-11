@@ -1,0 +1,103 @@
+{{!--
+  Pagina admin di conferma per la disattivazione di una risorsa.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/resources/confirm-deactivate, il contenuto di questo file viene
+  inserito dentro {{{body}}} del layout principale main.hbs.
+
+  Questa pagina viene mostrata quando l'amministratore sta per disattivare una
+  risorsa che può avere prenotazioni future confermate.
+
+  Disattivare una risorsa significa impostarla come non attiva:
+    - la risorsa resta nel database;
+    - non viene più mostrata agli utenti standard;
+    - non può essere prenotata finché non viene riattivata.
+
+  Se esistono prenotazioni future confermate su quella risorsa, la pagina avvisa
+  l'admin che quelle prenotazioni verranno annullate. In questo modo l'admin può
+  decidere consapevolmente se procedere.
+
+  La pagina riceve dal backend:
+    - resource: dati della risorsa da disattivare;
+    - typeLabel: nome leggibile della categoria;
+    - futureCount: numero di prenotazioni future coinvolte;
+    - futureBookings: elenco delle prenotazioni che verranno annullate.
+
+  Il form finale invia una POST a /admin/resources/:id/deactivate con
+  confirmed=1. Questo flag indica al backend che l'admin ha confermato
+  l'operazione e che la disattivazione può essere applicata davvero.
+
+  La disattivazione e l'annullamento delle prenotazioni future vengono gestiti
+  lato server dentro la rotta admin, non dentro il template.
+--}}
+
+{{!-- Contenitore principale della pagina di conferma disattivazione. --}}
+<main class="auth">
+  {{!-- Card centrale con avviso, dati della risorsa e conferma finale. --}}
+  <section class="card card--wide">
+    <h1 class="card__brand">
+      <a href="/dashboard" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Conferma disattivazione</h2>
+
+    {{!-- Avviso principale: spiega l'effetto della disattivazione e delle prenotazioni coinvolte. --}}
+    <div class="callout callout--warning" role="alert">
+      Stai per disattivare "<strong>{{resource.name}}</strong>".
+      {{#if futureCount}}
+        Questa operazione annullerà
+        {{#if (eq futureCount 1)}}1 prenotazione futura{{else}}{{futureCount}} prenotazioni future{{/if}}
+        confermata. L'operazione non è reversibile per le
+        prenotazioni annullate.
+      {{else}}
+        La risorsa non sarà più visibile agli utenti standard finché
+        non verrà riattivata.
+      {{/if}}
+    </div>
+
+    {{!-- Riepilogo della risorsa che l'admin sta per disattivare. --}}
+    <dl class="resource-show__details">
+      <div>
+        <dt>Categoria</dt>
+        <dd>{{typeLabel}}</dd>
+      </div>
+      <div>
+        <dt>Capienza</dt>
+        <dd>{{resource.capacity}}</dd>
+      </div>
+      <div>
+        <dt>Posizione</dt>
+        <dd>{{resource.location}}</dd>
+      </div>
+    </dl>
+
+    {{!-- Elenco mostrato solo se ci sono prenotazioni future da annullare. --}}
+    {{#if futureBookings.length}}
+      <h3 class="confirm-section-title">Prenotazioni che verranno annullate</h3>
+      {{!-- Lista compatta delle prenotazioni impattate: data, orario e utente. --}}
+      <ul class="confirm-bookings">
+        {{!-- Ciclo sulle prenotazioni future confermate preparate dal backend. --}}
+        {{#each futureBookings}}
+          <li>
+            <strong>{{date_label}}</strong> · {{start_time}}–{{end_time}} ·
+            utente <em>{{user_username}}</em>
+          </li>
+        {{/each}}
+      </ul>
+    {{/if}}
+
+    {{!--
+  Form di conferma definitiva.
+
+  Invia confirmed=1 alla rotta di disattivazione, così il backend sa che
+  l'admin ha confermato l'operazione.
+--}}
+    <form method="post" action="/admin/resources/{{resource.id}}/deactivate" class="form-row">
+      <input type="hidden" name="confirmed" value="1">
+      {{!-- Annulla l'operazione e torna alla lista admin della categoria. --}}
+      <a class="btn btn--secondary" href="/admin/resources?type={{resource.type}}">Torna indietro</a>
+      {{!-- Conferma la disattivazione della risorsa. --}}
+      <button type="submit" class="btn btn--danger">Conferma disattivazione</button>
+    </form>
+  </section>
+</main>

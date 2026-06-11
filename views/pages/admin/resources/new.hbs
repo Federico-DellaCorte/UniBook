@@ -1,0 +1,155 @@
+{{!--
+  Pagina admin per creare una nuova risorsa.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/resources/new, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  La pagina appartiene all'area amministrativa ed è accessibile solo agli utenti
+  con ruolo admin, perché la rotta è protetta da requireAdmin.
+
+  Il form invia i dati con metodo POST verso /admin/resources.
+  Quando l'admin preme "Crea risorsa", il backend riceve:
+    - nome della risorsa;
+    - categoria;
+    - capienza;
+    - posizione;
+    - descrizione;
+    - disponibilità settimanale.
+
+  I campi principali vengono validati in admin.resources.routes.js tramite
+  validateResourcePayload(). La disponibilità settimanale viene invece letta e
+  validata da resourceAvailabilityService.
+
+  Se la validazione fallisce, la rotta renderizza di nuovo questa pagina
+  passando:
+    - values, per ripopolare i campi già inseriti;
+    - errors, per mostrare messaggi vicino ai campi non validi;
+    - availability, per mantenere la settimana impostata dall'admin.
+
+  La categoria è una select costruita con typeOptions, preparata lato server.
+  La categoria iniziale può riflettere il parametro ?type dell'URL, per esempio
+  quando l'admin clicca "Nuova risorsa" partendo da una categoria specifica.
+
+  La disponibilità settimanale non è scritta direttamente qui: viene inclusa
+  tramite il partial weekly-availability.hbs, così lo stesso blocco può essere
+  riutilizzato anche nella pagina di modifica risorsa.
+--}}
+
+{{!-- Contenitore principale della pagina di creazione risorsa. --}}
+<main class="auth">
+  {{!-- Card centrale con titolo e form amministrativo della nuova risorsa. --}}
+  <section class="card card--wide">
+    <h1 class="card__brand">
+      <a href="/dashboard" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Nuova risorsa</h2>
+
+    {{!--
+  Form di creazione risorsa.
+
+  Invia i dati alla rotta POST /admin/resources.
+  novalidate disattiva la validazione automatica del browser: la validazione
+  principale viene gestita lato server.
+--}}
+    <form method="post" action="/admin/resources" class="form" novalidate>
+      {{!-- Nome della risorsa: campo obbligatorio e ripopolato con values.name. --}}
+      <div class="form-field">
+        <label for="name" class="form-label">Nome</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          class="form-input{{#if errors.name}} form-input--invalid{{/if}}"
+          value="{{values.name}}"
+          autocomplete="off"
+          minlength="3"
+          autofocus
+        />
+        {{#if errors.name}}
+          <p class="form-error">{{errors.name}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Categoria della risorsa: le opzioni arrivano da typeOptions preparato dal backend. --}}
+      <div class="form-field">
+        <label for="type" class="form-label">Categoria</label>
+        <select
+          id="type"
+          name="type"
+          class="form-input{{#if errors.type}} form-input--invalid{{/if}}"
+        >
+          {{!-- Ciclo sulle categorie disponibili: ogni elemento genera una option della select. --}}
+          {{#each typeOptions}}
+            <option value="{{type}}" {{#if selected}}selected{{/if}}>{{labelSingular}}</option>
+          {{/each}}
+        </select>
+        {{#if errors.type}}
+          <p class="form-error">{{errors.type}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Capienza della risorsa: numero intero validato anche lato server. --}}
+      <div class="form-field">
+        <label for="capacity" class="form-label">Capienza</label>
+        <input
+          id="capacity"
+          name="capacity"
+          type="number"
+          min="1"
+          max="1499"
+          step="1"
+          class="form-input{{#if errors.capacity}} form-input--invalid{{/if}}"
+          value="{{values.capacity}}"
+        />
+        {{#if errors.capacity}}
+          <p class="form-error">{{errors.capacity}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Posizione fisica della risorsa, per esempio edificio, piano o aula. --}}
+      <div class="form-field">
+        <label for="location" class="form-label">Posizione</label>
+        <input
+          id="location"
+          name="location"
+          type="text"
+          class="form-input{{#if errors.location}} form-input--invalid{{/if}}"
+          value="{{values.location}}"
+        />
+        {{#if errors.location}}
+          <p class="form-error">{{errors.location}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Descrizione opzionale della risorsa. --}}
+      <div class="form-field">
+        <label for="description" class="form-label">Descrizione</label>
+        <textarea
+          id="description"
+          name="description"
+          rows="3"
+          class="form-input form-textarea"
+        >{{values.description}}</textarea>
+      </div>
+
+      {{!-- Disponibilità settimanale inclusa come partial riutilizzabile. --}}
+      {{> weekly-availability}}
+
+      {{!-- Azioni finali del form: annullare o creare la risorsa. --}}
+      <div class="form-row">
+        <a class="btn btn--secondary" href="/admin/resources?type={{currentType}}">Annulla</a>
+        <button type="submit" class="btn btn--primary">Crea risorsa</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+{{!--
+  Script lato client dei giorni aperti/chiusi.
+
+  Abilita o disabilita i select degli orari in base alla checkbox del giorno.
+  La validazione definitiva resta comunque lato server.
+--}}
+<script defer src="/js/availability-toggle.js"></script>

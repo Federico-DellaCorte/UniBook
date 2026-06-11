@@ -1,0 +1,125 @@
+{{!--
+  Pagina admin di conferma per la modifica di una risorsa.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/resources/confirm-update, il contenuto di questo file viene
+  inserito dentro {{{body}}} del layout principale main.hbs.
+
+  Questa pagina viene mostrata solo in un caso particolare: l'admin sta
+  modificando una risorsa, ma la modifica può rendere non più valide alcune
+  prenotazioni future già confermate.
+
+  Gli scenari principali sono due:
+    - cambio di categoria della risorsa;
+    - modifica della disponibilità settimanale.
+
+  Se cambia la categoria, possono cambiare anche le regole applicative collegate
+  alla risorsa, per esempio durata massima, limite giornaliero o regole di
+  sovrapposizione. Per questo vengono considerate impattate le prenotazioni
+  future confermate della risorsa.
+
+  Se invece cambia la disponibilità settimanale, vengono considerate impattate
+  solo le prenotazioni future che non rientrano più nei nuovi giorni/orari di
+  apertura.
+
+  La pagina riceve dal backend:
+    - resource: risorsa che si sta modificando;
+    - confirmReason: motivo della conferma, per esempio "type" o "availability";
+    - bookingsCount: numero di prenotazioni future coinvolte;
+    - bookingsToCancel: elenco delle prenotazioni che verranno annullate;
+    - formValues: valori inseriti dall'admin nel form precedente;
+    - weekRowsForm: disponibilità settimanale inserita dall'admin.
+
+  Il punto importante è che questa pagina non perde i dati già inseriti.
+  Il form hidden finale reinvia gli stessi valori della modifica iniziale,
+  aggiungendo confirmed=1.
+
+  In questo modo la rotta POST /admin/resources/:id/edit capisce che non si
+  tratta più del primo tentativo di modifica, ma della conferma definitiva.
+  A quel punto il backend applica aggiornamento, sostituzione della disponibilità
+  e annullamento delle prenotazioni impattate dentro una transazione.
+--}}
+
+{{!-- Contenitore principale della pagina di conferma modifica. --}}
+<main class="auth">
+  {{!-- Card centrale con avviso, prenotazioni impattate e conferma finale. --}}
+  <section class="card card--wide">
+    <h1 class="card__brand">
+      <a href="/dashboard" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Conferma modifica risorsa</h2>
+
+    {{!--
+  Avviso principale.
+
+  Il testo cambia in base a confirmReason:
+  se vale "type" spiega il cambio categoria;
+  altrimenti spiega la modifica della disponibilità settimanale.
+--}}
+    <div class="callout callout--warning" role="alert">
+      {{#if (eq confirmReason "type")}}
+        Stai cambiando la tipologia di "<strong>{{resource.name}}</strong>"
+        da <em>{{oldTypeLabel}}</em> a <em>{{newTypeLabel}}</em>.
+        Il cambio di tipologia modifica le regole di prenotazione
+        applicate alla risorsa (durata massima, limite giornaliero,
+        regole sull'overlap utente). Per coerenza,
+        {{#if (eq bookingsCount 1)}}1 prenotazione futura{{else}}{{bookingsCount}} prenotazioni future{{/if}}
+        confermata verrà annullata. L'operazione non è reversibile.
+      {{else}}
+        La nuova disponibilità settimanale di "<strong>{{resource.name}}</strong>"
+        rende non valide
+        {{#if (eq bookingsCount 1)}}1 prenotazione futura{{else}}{{bookingsCount}} prenotazioni future{{/if}}
+        confermata. Se confermi, queste prenotazioni verranno
+        spostate nello storico come annullate. L'operazione non è
+        reversibile.
+      {{/if}}
+    </div>
+
+    {{!-- Elenco delle prenotazioni future che verranno annullate dalla modifica. --}}
+    {{#if bookingsToCancel.length}}
+      <h3 class="confirm-section-title">Prenotazioni che verranno annullate</h3>
+      {{!-- Lista leggibile delle prenotazioni coinvolte: data, orario, utente e motivo. --}}
+      <ul class="confirm-bookings">
+        {{!-- Ciclo sulle prenotazioni impattate preparate dal backend. --}}
+        {{#each bookingsToCancel}}
+          <li>
+            <strong>{{date_label}}</strong> · {{start_time}}–{{end_time}} ·
+            utente <em>{{user_username}}</em>
+            {{#if reasonLabel}}<span class="confirm-bookings__reason"> · {{reasonLabel}}</span>{{/if}}
+          </li>
+        {{/each}}
+      </ul>
+    {{/if}}
+
+{{!--
+  Form hidden di conferma definitiva.
+
+  Reinvia alla rotta di modifica tutti i dati inseriti dall'admin nel form
+  precedente, aggiungendo confirmed=1.
+
+  La rotta interpreta questa seconda POST come autorizzazione finale a procedere.
+--}}
+    <form method="post" action="/admin/resources/{{resource.id}}/edit" class="form-row">
+      <input type="hidden" name="confirmed" value="1">
+      <input type="hidden" name="name" value="{{formValues.name}}">
+      <input type="hidden" name="type" value="{{formValues.type}}">
+      <input type="hidden" name="capacity" value="{{formValues.capacity}}">
+      <input type="hidden" name="location" value="{{formValues.location}}">
+      <input type="hidden" name="description" value="{{formValues.description}}">
+      {{!-- Righe hidden della disponibilità settimanale, una per ogni giorno. --}}
+      {{#each weekRowsForm}}
+        {{#if is_open}}
+          <input type="hidden" name="{{concat "day" weekday "_open"}}" value="1">
+        {{/if}}
+        <input type="hidden" name="{{concat "day" weekday "_opens_at"}}" value="{{opens_at}}">
+        <input type="hidden" name="{{concat "day" weekday "_closes_at"}}" value="{{closes_at}}">
+      {{/each}}
+
+      {{!-- Annulla la conferma e torna al form di modifica della risorsa. --}}
+      <a class="btn btn--secondary" href="/admin/resources/{{resource.id}}/edit">Torna indietro</a>
+      {{!-- Conferma l'operazione e invia la seconda POST al backend. --}}
+      <button type="submit" class="btn btn--danger">Conferma modifica</button>
+    </form>
+  </section>
+</main>

@@ -1,0 +1,142 @@
+{{!--
+  Pagina admin di consultazione delle prenotazioni in vista lista.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/bookings/list, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  Questa pagina appartiene all'area amministrativa ed è accessibile solo agli
+  utenti con ruolo admin, perché la rotta è protetta da requireAdmin.
+
+  Lo scopo della pagina è permettere all'amministratore di consultare tutte le
+  prenotazioni presenti nel sistema, non solo quelle dell'utente corrente.
+
+  La pagina riceve dal backend:
+    - summary: testo di riepilogo dei risultati filtrati;
+    - tabs: URL per passare tra vista lista e vista calendario;
+    - periodOptions: opzioni del filtro periodo;
+    - typeOptions: opzioni del filtro tipologia;
+    - resourceGroups: risorse raggruppate per categoria;
+    - bookings: elenco delle prenotazioni da mostrare.
+
+  I filtri vengono inviati con metodo GET verso /admin/bookings.
+  Questo significa che periodo, tipologia e risorsa vengono inseriti nella query
+  string dell'URL. In questo modo la vista filtrata è ricaricabile, copiabile e
+  condivisibile.
+
+  Ogni prenotazione viene mostrata come card con:
+    - nome della risorsa;
+    - badge della categoria;
+    - stato della prenotazione;
+    - data e fascia oraria;
+    - username ed email dell'utente proprietario.
+
+  Questa pagina è solo consultiva: non modifica direttamente le prenotazioni.
+  Le operazioni che cambiano prenotazioni future, come disattivare o modificare
+  una risorsa, vengono gestite nelle pagine admin delle risorse.
+--}}
+
+{{!-- Contenitore principale della vista lista prenotazioni admin. --}}
+<main class="page">
+  {{!-- Intestazione: ritorno alla dashboard, titolo e riepilogo dei risultati. --}}
+  <header class="page-header">
+    <a href="/dashboard" class="page-header__back">← Dashboard</a>
+    <h1 class="page-header__title">Tutte le prenotazioni</h1>
+    <p class="page-header__subtitle">{{summary}}</p>
+  </header>
+
+  {{!-- Tab per passare tra vista lista e vista calendario mantenendo i filtri. --}}
+  <nav class="tab-bar" role="tablist" aria-label="Vista prenotazioni">
+    <a class="tab-bar__link tab-bar__link--active" href="{{tabs.listUrl}}" role="tab" aria-selected="true">
+      Vista lista
+    </a>
+    <a class="tab-bar__link" href="{{tabs.calendarUrl}}" role="tab" aria-selected="false">
+      Vista calendario
+    </a>
+  </nav>
+
+  {{!--
+  Barra dei filtri admin.
+
+  Usa GET, quindi i filtri vengono salvati nella query string dell'URL.
+--}}
+  <form method="get" action="/admin/bookings" class="filter-bar">
+    {{!-- Campo hidden: mantiene attiva la vista lista quando si applicano i filtri. --}}
+    <input type="hidden" name="view" value="list">
+    {{!-- Filtro periodo: tutte, future attive oppure storico. --}}
+    <div class="form-field">
+      <label class="form-label" for="period">Periodo</label>
+      <select id="period" name="period" class="form-input">
+        {{#each periodOptions}}
+          <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    {{!-- Filtro per categoria di risorsa, costruito da typeOptions. --}}
+    <div class="form-field">
+      <label class="form-label" for="type">Tipologia</label>
+      <select id="type" name="type" class="form-input">
+        {{#each typeOptions}}
+          <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    {{!-- Filtro per singola risorsa, con risorse raggruppate per categoria. --}}
+    <div class="form-field">
+      <label class="form-label" for="resourceId">Risorsa</label>
+      <select id="resourceId" name="resourceId" class="form-input">
+        <option value="">Tutte le risorse</option>
+        {{#each resourceGroups}}
+          <optgroup label="{{label}}">
+            {{#each items}}
+              <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+            {{/each}}
+          </optgroup>
+        {{/each}}
+      </select>
+    </div>
+
+    {{!-- Azioni del filtro: applicare i criteri scelti oppure pulire la ricerca. --}}
+    <div class="filter-bar__actions">
+      <button type="submit" class="btn btn--primary btn--small">Applica filtri</button>
+      <a class="btn btn--secondary btn--small" href="/admin/bookings">Pulisci</a>
+    </div>
+  </form>
+
+  {{!-- Se esistono prenotazioni compatibili con i filtri, mostro la lista. --}}
+  {{#if bookings.length}}
+  {{!-- Lista delle prenotazioni amministrative. --}}
+    <ul class="bookings-list">
+      {{!-- Ciclo sulle prenotazioni: ogni elemento genera una card. --}}
+      {{#each bookings}}
+        {{!-- Card della singola prenotazione, con stile diverso se annullata o conclusa. --}}
+        <li class="booking-card {{#if (eq statusKey 'cancelled')}}booking-card--past{{/if}}{{#if (eq statusKey 'past')}} booking-card--past{{/if}}">
+          {{!-- Testata della card: nome risorsa, categoria e stato prenotazione. --}}
+          <header class="booking-card__head">
+            <h3 class="booking-card__title">{{resource_name}}</h3>
+            <div class="booking-card__badges">
+              <span class="badge badge--{{resource_type}}">{{typeLabel}}</span>
+              <span class="status-badge status-badge--{{statusKey}}">{{statusLabel}}</span>
+            </div>
+          </header>
+          {{!-- Utente proprietario della prenotazione: username ed email. --}}
+          <p class="booking-card__when">
+            <strong>{{date_label}}</strong>
+            <span class="booking-card__separator">·</span>
+            {{start_time}} – {{end_time}}
+          </p>
+          <p class="booking-card__user">
+            <span class="booking-card__user-name">{{user_username}}</span>
+            <span class="booking-card__user-email">{{user_email}}</span>
+          </p>
+        </li>
+      {{/each}}
+    </ul>
+  {{!-- Stato vuoto: mostrato quando nessuna prenotazione rispetta i filtri. --}}
+  {{else}}
+    <p class="empty-state">Nessuna prenotazione corrisponde ai filtri selezionati.</p>
+  {{/if}}
+</main>

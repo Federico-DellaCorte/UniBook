@@ -1,0 +1,63 @@
+{{!--
+  Pagina di errore 404 dell'applicazione UniBook.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  l'errore 404, il contenuto di questo file viene inserito dentro {{{body}}}
+  del layout principale main.hbs.
+
+  L'errore 404 significa "Not Found", cioè "pagina non trovata".
+  Viene usato quando l'utente richiede un URL che non corrisponde a nessuna
+  rotta definita nell'applicazione.
+
+  Questa pagina viene renderizzata dal middleware finale di server.js, cioè il
+  gestore catch-all registrato dopo tutte le altre rotte. Se nessuna rotta ha
+  gestito la richiesta, Express arriva a quel middleware e mostra questa pagina.
+
+  Mostrare una pagina 404 personalizzata è meglio della pagina tecnica di
+  default, perché mantiene lo stesso stile grafico del progetto e guida l'utente
+  verso azioni utili, come tornare alla home, andare alla dashboard o accedere.
+
+  Il template riceve dal backend requestedPath, cioè il percorso richiesto
+  dall'utente. Questo permette di mostrare quale URL non è stato trovato.
+
+  La pagina usa anche currentUser:
+    - se currentUser esiste, l'utente è autenticato e viene mostrato il link
+      alla dashboard;
+    - se currentUser non esiste, viene mostrato il link alla pagina di login.
+
+  Per le rotte API, come /api/*, il backend può restituire JSON invece di questa
+  pagina HTML. Questo è utile perché il JavaScript lato client si aspetta dati
+  JSON, non una pagina HTML da interpretare.
+--}}
+
+{{!-- Contenitore principale della pagina di errore. --}}
+<main class="dashboard">
+  {{!-- Card centrale che mostra codice errore, messaggio e azioni disponibili. --}}
+  <section class="card card--wide error-card">
+    <h1 class="card__brand">
+      <a href="/" class="card__brand-link">UniBook</a>
+    </h1>
+    {{!-- Codice HTTP dell'errore: 404 indica che la pagina richiesta non esiste. --}}
+    <p class="error-card__code">404</p>
+    <h2 class="card__title">Pagina non trovata</h2>
+    <p class="card__lead">
+      L'indirizzo richiesto non esiste o non è più disponibile.
+      Può essere stato modificato, oppure il link che hai seguito
+      potrebbe essere obsoleto.
+    </p>
+    {{!-- Percorso richiesto dall'utente, passato dal backend come requestedPath. --}}
+    <p class="error-card__path"><code>{{requestedPath}}</code></p>
+    {{!-- Azioni di recupero: permettono all'utente di uscire dalla pagina di errore. --}}
+    <div class="card__actions">
+      <a class="btn btn--primary" href="/">Torna alla home</a>
+      {{!-- Se l'utente è loggato, propongo il ritorno alla dashboard. --}}
+      {{#if currentUser}}
+        <a class="btn btn--secondary" href="/dashboard">Vai alla dashboard</a>
+      {{!-- Se l'utente non è loggato, propongo la pagina di accesso. --}}
+      {{else}}
+        <a class="btn btn--secondary" href="/login">Accedi</a>
+      {{/if}}
+    </div>
+  </section>
+</main>

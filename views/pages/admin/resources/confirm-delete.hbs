@@ -1,0 +1,98 @@
+{{!--
+  Pagina admin di conferma per l'eliminazione definitiva di una risorsa.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/resources/confirm-delete, il contenuto di questo file viene
+  inserito dentro {{{body}}} del layout principale main.hbs.
+
+  Questa pagina viene mostrata quando l'amministratore sta per eliminare
+  definitivamente una risorsa dal sistema.
+
+  Eliminare una risorsa è diverso da disattivarla:
+    - disattivare imposta active = 0 e mantiene la risorsa nel database;
+    - eliminare rimuove fisicamente la risorsa dal database.
+
+  Per questo l'avviso usa un tono più forte: l'operazione è irreversibile e
+  comporta la rimozione della risorsa insieme alle prenotazioni associate.
+
+  La pagina riceve dal backend:
+    - resource: dati della risorsa da eliminare;
+    - typeLabel: nome leggibile della categoria;
+    - futureCount: numero di prenotazioni future confermate coinvolte;
+    - futureBookings: elenco delle prenotazioni future che verranno rimosse.
+
+  Il form finale invia una POST a /admin/resources/:id/delete con confirmed=1.
+  Questo flag indica al backend che l'admin ha confermato consapevolmente
+  l'operazione.
+
+  L'eliminazione vera non avviene nel template: viene gestita lato server dalla
+  rotta admin, che applica la cancellazione nel database.
+--}}
+
+{{!-- Contenitore principale della pagina di conferma eliminazione. --}}
+<main class="auth">
+  {{!-- Card centrale con avviso, riepilogo risorsa e conferma finale. --}}
+  <section class="card card--wide">
+    <h1 class="card__brand">
+      <a href="/dashboard" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Conferma eliminazione definitiva</h2>
+
+    {{!-- Avviso critico: segnala che l'eliminazione è definitiva e irreversibile. --}}
+    <div class="callout callout--danger" role="alert">
+      Stai per eliminare definitivamente "<strong>{{resource.name}}</strong>".
+      L'operazione è irreversibile e rimuove anche tutte le
+      prenotazioni associate (passate e future).
+      {{#if futureCount}}
+        In particolare verranno annullate
+        {{#if (eq futureCount 1)}}1 prenotazione futura{{else}}{{futureCount}} prenotazioni future{{/if}}
+        confermata di altri utenti.
+      {{/if}}
+    </div>
+
+    {{!-- Riepilogo della risorsa che l'admin sta per eliminare. --}}
+    <dl class="resource-show__details">
+      <div>
+        <dt>Categoria</dt>
+        <dd>{{typeLabel}}</dd>
+      </div>
+      <div>
+        <dt>Capienza</dt>
+        <dd>{{resource.capacity}}</dd>
+      </div>
+      <div>
+        <dt>Posizione</dt>
+        <dd>{{resource.location}}</dd>
+      </div>
+    </dl>
+
+    {{!-- Elenco mostrato solo se ci sono prenotazioni future coinvolte. --}}
+    {{#if futureBookings.length}}
+      <h3 class="confirm-section-title">Prenotazioni che verranno rimosse</h3>
+      {{!-- Lista compatta delle prenotazioni future che verranno rimosse. --}}
+      <ul class="confirm-bookings">
+        {{#each futureBookings}}
+          <li>
+            <strong>{{date_label}}</strong> · {{start_time}}–{{end_time}} ·
+            utente <em>{{user_username}}</em>
+          </li>
+        {{/each}}
+      </ul>
+    {{/if}}
+
+    {{!--
+  Form di conferma definitiva.
+
+  Invia confirmed=1 alla rotta di eliminazione, così il backend sa che
+  l'admin ha confermato l'operazione.
+--}}
+    <form method="post" action="/admin/resources/{{resource.id}}/delete" class="form-row">
+      <input type="hidden" name="confirmed" value="1">
+      {{!-- Annulla l'operazione e torna alla lista admin della categoria. --}}
+      <a class="btn btn--secondary" href="/admin/resources?type={{resource.type}}">Torna indietro</a>
+      {{!-- Conferma l'eliminazione definitiva della risorsa. --}}
+      <button type="submit" class="btn btn--danger-strong">Conferma eliminazione definitiva</button>
+    </form>
+  </section>
+</main>

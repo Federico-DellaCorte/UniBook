@@ -1,0 +1,73 @@
+{{!--
+  Partial per mostrare l'occupazione giornaliera di una risorsa.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  Non è una pagina completa, ma un partial: viene incluso nella scheda dettaglio
+  di una risorsa per mostrare se, in una certa data, la risorsa è aperta e quanto
+  è occupata.
+
+  Il partial riceve un oggetto dayView preparato dal backend, in particolare da
+  resources.routes.js tramite availabilityService.computeDayOccupancy().
+
+  I dati principali ricevuti sono:
+    - dayName: nome del giorno, per esempio "Lunedì";
+    - date: data selezionata;
+    - isOpen: indica se la risorsa è aperta in quel giorno;
+    - opensAt e closesAt: orari di apertura e chiusura;
+    - slots: fasce orarie aggregate con occupazione, capienza e stato.
+
+  Ogni slot rappresenta una fascia della giornata e contiene:
+    - start: orario di inizio;
+    - end: orario di fine;
+    - occupied: posti occupati;
+    - capacity: capienza totale della risorsa;
+    - status: stato dello slot, cioè free, partial o full.
+
+  Questo partial è privacy-safe: non mostra mai username, email o dati personali
+  degli utenti che hanno prenotato. Mostra solo dati aggregati, come posti
+  occupati e capienza totale.
+
+  La stessa struttura può essere aggiornata anche lato client tramite
+  public/js/resource-availability.js, quando l'utente cambia data senza
+  ricaricare tutta la pagina.
+--}}
+
+{{!-- Intestazione del giorno selezionato: mostra data e stato aperta/chiusa. --}}
+<p class="day-view__title">
+  {{dayName}} {{date}}
+  {{!-- Se la risorsa è aperta, mostro gli slot di occupazione della giornata. --}}
+  {{#if isOpen}}
+    <span class="day-view__hours">aperta {{opensAt}}–{{closesAt}}</span>
+  {{else}}
+    <span class="day-view__hours">chiusa</span>
+  {{/if}}
+</p>
+
+{{#if isOpen}}
+  {{#if slots.length}}
+  {{!-- Lista delle fasce orarie aggregate, ciascuna con occupazione e stato. --}}
+    <ul class="day-view__slots">
+      {{!-- Ciclo Handlebars sugli slot: ogni elemento genera una riga della lista. --}}
+      {{#each slots}}
+        <li class="day-view__slot day-view__slot--{{status}}">
+          <span class="day-view__slot-time">{{start}}–{{end}}</span>
+          <span class="day-view__slot-occupancy">
+            {{occupied}}/{{capacity}} posti occupati
+          </span>
+          {{!-- Etichetta leggibile dello stato tecnico dello slot: free, partial o full. --}}
+          <span class="day-view__slot-status">
+            {{#if (eq status "free")}}libera{{/if}}
+            {{#if (eq status "partial")}}parzialmente occupata{{/if}}
+            {{#if (eq status "full")}}piena{{/if}}
+          </span>
+        </li>
+      {{/each}}
+    </ul>
+  {{else}}
+  {{!-- Messaggio mostrato quando il giorno è aperto ma non ci sono slot prenotabili. --}}
+    <p class="empty-state">Nessuno slot prenotabile in questa data.</p>
+  {{/if}}
+{{else}}
+{{!-- Messaggio mostrato quando la risorsa è chiusa nel giorno selezionato. --}}
+  <p class="callout callout--warning">Risorsa chiusa in questo giorno.</p>
+{{/if}}

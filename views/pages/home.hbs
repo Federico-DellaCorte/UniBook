@@ -1,0 +1,54 @@
+{{!--
+  Pagina homepage dell'applicazione UniBook.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando una rotta Express
+  renderizza la homepage, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  La homepage presenta il nome del progetto, uno slogan e i principali punti
+  di accesso all'applicazione.
+
+  La parte dinamica dipende dalla variabile currentUser.
+  currentUser viene preparata lato backend dal middleware currentUser.js e resa
+  disponibile ai template tramite res.locals.currentUser.
+
+  Se currentUser esiste, significa che l'utente è autenticato.
+  In quel caso la pagina mostra:
+    - il link Dashboard;
+    - il bottone Esci.
+
+  Se currentUser non esiste, significa che l'utente è anonimo.
+  In quel caso la pagina mostra:
+    - il link Accedi;
+    - il link Registrati.
+
+  Il controllo {{#if currentUser}} è quindi una condizione Handlebars:
+  permette di mostrare contenuti diversi in base allo stato di login dell'utente.
+
+  Il logout viene realizzato con un form POST verso /logout.
+  Questa scelta è corretta perché il logout modifica lo stato della sessione:
+  non dovrebbe essere una semplice GET, che invece dovrebbe servire solo a
+  leggere o visualizzare contenuti.
+--}}
+
+{{!-- Sezione principale della homepage: titolo, slogan e azioni iniziali. --}}
+<main class="hero">
+  <h1 class="hero__title">UniBook</h1>
+  <p class="hero__tagline">Book and plan your study space </p>
+
+  {{!-- Azioni mostrate in modo diverso a seconda che l'utente sia loggato o anonimo. --}}
+  <div class="hero__actions">
+    {{!-- Utente autenticato: mostra Dashboard e logout. --}}
+    {{#if currentUser}}
+      <a class="btn btn--primary" href="/dashboard">Dashboard</a>
+      <form method="post" action="/logout" class="hero__logout-form">
+        <button type="submit" class="btn btn--secondary">Esci</button>
+      </form>
+    {{!-- Utente anonimo: mostra accesso e registrazione. --}}
+    {{else}}
+      <a class="btn btn--primary" href="/login">Accedi</a>
+      <a class="btn btn--secondary" href="/register">Registrati</a>
+    {{/if}}
+  </div>
+</main>

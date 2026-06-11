@@ -1,0 +1,163 @@
+{{!--
+  Pagina admin per modificare una risorsa esistente.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/admin/resources/edit, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  La pagina appartiene all'area amministrativa ed è accessibile solo agli utenti
+  con ruolo admin, perché la rotta è protetta da requireAdmin.
+
+  Rispetto alla pagina di creazione, qui il form lavora su una risorsa già
+  presente nel database. Per questo:
+    - i campi sono precompilati con values;
+    - l'action del form contiene l'id della risorsa;
+    - il bottone finale salva una modifica, non crea un nuovo record.
+
+  Il form invia una richiesta POST a:
+
+    /admin/resources/{{resource.id}}/edit
+
+  Il backend riceve i nuovi dati della risorsa:
+    - nome;
+    - categoria;
+    - capienza;
+    - posizione;
+    - descrizione;
+    - disponibilità settimanale.
+
+  I campi principali vengono validati in admin.resources.routes.js tramite
+  validateResourcePayload(). La disponibilità settimanale viene invece letta e
+  validata da resourceAvailabilityService.
+
+  Questa modifica può avere effetto sulle prenotazioni future già confermate.
+  Per esempio, se l'admin cambia categoria o riduce gli orari di apertura,
+  alcune prenotazioni future potrebbero diventare non più valide.
+
+  In quel caso la rotta non applica subito la modifica, ma può mostrare una
+  pagina intermedia di conferma, dove l'admin vede quali prenotazioni saranno
+  annullate prima di procedere.
+
+  Se la validazione fallisce, questa stessa pagina viene renderizzata di nuovo
+  con:
+    - values, per mantenere i dati inseriti;
+    - errors, per mostrare gli errori vicino ai campi;
+    - availability, per mantenere la settimana impostata dall'admin.
+
+  La disponibilità settimanale viene inclusa tramite il partial
+  weekly-availability.hbs, lo stesso usato nella creazione della risorsa.
+--}}
+
+{{!-- Contenitore principale della pagina di modifica risorsa. --}}
+<main class="auth">
+  {{!-- Card centrale con titolo e form amministrativo della risorsa. --}}
+  <section class="card card--wide">
+    <h1 class="card__brand">
+      <a href="/dashboard" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Modifica risorsa</h2>
+
+    {{!--
+  Form di modifica risorsa.
+
+  Invia i dati aggiornati alla rotta POST /admin/resources/:id/edit.
+  L'id della risorsa è inserito nell'URL tramite resource.id.
+--}}
+    <form method="post" action="/admin/resources/{{resource.id}}/edit" class="form" novalidate>
+      {{!-- Nome della risorsa: campo obbligatorio, precompilato con values.name. --}}
+      <div class="form-field">
+        <label for="name" class="form-label">Nome</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          class="form-input{{#if errors.name}} form-input--invalid{{/if}}"
+          value="{{values.name}}"
+          autocomplete="off"
+          minlength="3"
+        />
+        {{#if errors.name}}
+          <p class="form-error">{{errors.name}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Categoria della risorsa: la select viene costruita con typeOptions. --}}
+      <div class="form-field">
+        <label for="type" class="form-label">Categoria</label>
+        <select
+          id="type"
+          name="type"
+          class="form-input{{#if errors.type}} form-input--invalid{{/if}}"
+        >
+          {{!-- Ciclo sulle categorie disponibili: selected indica quella attuale. --}}
+          {{#each typeOptions}}
+            <option value="{{type}}" {{#if selected}}selected{{/if}}>{{labelSingular}}</option>
+          {{/each}}
+        </select>
+        {{#if errors.type}}
+          <p class="form-error">{{errors.type}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Capienza della risorsa: valore numerico validato anche lato server. --}}
+      <div class="form-field">
+        <label for="capacity" class="form-label">Capienza</label>
+        <input
+          id="capacity"
+          name="capacity"
+          type="number"
+          min="1"
+          max="1499"
+          step="1"
+          class="form-input{{#if errors.capacity}} form-input--invalid{{/if}}"
+          value="{{values.capacity}}"
+        />
+        {{#if errors.capacity}}
+          <p class="form-error">{{errors.capacity}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Posizione fisica della risorsa, precompilata con values.location. --}}
+      <div class="form-field">
+        <label for="location" class="form-label">Posizione</label>
+        <input
+          id="location"
+          name="location"
+          type="text"
+          class="form-input{{#if errors.location}} form-input--invalid{{/if}}"
+          value="{{values.location}}"
+        />
+        {{#if errors.location}}
+          <p class="form-error">{{errors.location}}</p>
+        {{/if}}
+      </div>
+
+      {{!-- Descrizione opzionale della risorsa. --}}
+      <div class="form-field">
+        <label for="description" class="form-label">Descrizione</label>
+        <textarea
+          id="description"
+          name="description"
+          rows="3"
+          class="form-input form-textarea"
+        >{{values.description}}</textarea>
+      </div>
+
+      {{!-- Disponibilità settimanale della risorsa, inclusa come partial riutilizzabile. --}}
+      {{> weekly-availability}}
+
+      {{!-- Azioni finali del form: annullare la modifica o salvare i cambiamenti. --}}
+      <div class="form-row">
+        <a class="btn btn--secondary" href="/admin/resources?type={{currentType}}">Annulla</a>
+        <button type="submit" class="btn btn--primary">Salva modifiche</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+{{!--
+  Script lato client per abilitare o disabilitare gli orari dei giorni aperti/chiusi.
+  La validazione definitiva resta comunque lato server.
+--}}
+<script defer src="/js/availability-toggle.js"></script>

@@ -1,0 +1,219 @@
+{{!--
+  Pagina "Le mie prenotazioni" dell'utente autenticato.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/bookings/mine, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  La pagina permette all'utente di consultare le proprie prenotazioni.
+  Non mostra prenotazioni di altri utenti: i dati arrivano dal backend già
+  filtrati in base a res.locals.currentUser.id.
+
+  L'interfaccia è organizzata in tre viste:
+    - upcoming: prossime prenotazioni future confermate;
+    - calendar: calendario settimanale delle prossime prenotazioni;
+    - history: storico delle prenotazioni passate o annullate.
+
+  La vista attiva viene controllata dalla query string:
+    /bookings/mine
+    /bookings/mine?view=calendar
+    /bookings/mine?view=history
+
+  Questa scelta rende le tab funzionanti anche senza JavaScript, perché ogni
+  cambio di sezione è una normale richiesta GET al server.
+
+  Le prenotazioni future confermate possono mostrare due azioni:
+    - Aggiungi al calendario (.ics);
+    - Annulla prenotazione.
+
+  Lo storico invece è solo consultabile: non permette né annullamento né export
+  .ics, perché una prenotazione passata o annullata non ha senso come nuovo
+  evento calendario.
+--}}
+
+{{!-- Contenitore principale della pagina "Le mie prenotazioni". --}}
+<main class="page">
+  {{!-- Intestazione: ritorno alla dashboard e titolo della pagina. --}}
+  <header class="page-header">
+    <a href="/dashboard" class="page-header__back">← Dashboard</a>
+    <h1 class="page-header__title">Le mie prenotazioni</h1>
+  </header>
+
+  {{!--
+  Barra delle tab.
+
+  Ogni link cambia la vista tramite query string.
+  aria-selected indica quale tab è attualmente attiva.
+--}}
+  <nav class="tab-bar" role="tablist" aria-label="Sezioni prenotazioni">
+    <a
+      class="tab-bar__link {{#if (eq view 'upcoming')}}tab-bar__link--active{{/if}}"
+      href="/bookings/mine"
+      role="tab"
+      aria-selected="{{#if (eq view 'upcoming')}}true{{else}}false{{/if}}"
+    >
+      Prossime
+      <span class="tab-bar__count">{{upcomingCount}}</span>
+    </a>
+    <a
+      class="tab-bar__link {{#if (eq view 'calendar')}}tab-bar__link--active{{/if}}"
+      href="/bookings/mine?view=calendar"
+      role="tab"
+      aria-selected="{{#if (eq view 'calendar')}}true{{else}}false{{/if}}"
+    >
+      Calendario
+    </a>
+    <a
+      class="tab-bar__link {{#if (eq view 'history')}}tab-bar__link--active{{/if}}"
+      href="/bookings/mine?view=history"
+      role="tab"
+      aria-selected="{{#if (eq view 'history')}}true{{else}}false{{/if}}"
+    >
+      Storico
+      <span class="tab-bar__count">{{historyCount}}</span>
+    </a>
+  </nav>
+
+  {{!-- Vista "Prossime": mostra le prenotazioni future confermate. --}}
+  {{#if (eq view 'upcoming')}}
+    <section class="bookings-section" role="tabpanel" aria-label="Prossime prenotazioni">
+      {{#if upcoming.length}}
+      {{!-- Lista delle prossime prenotazioni dell'utente. --}}
+        <ul class="bookings-list">
+          {{!-- Ciclo sulle prenotazioni future: ogni prenotazione genera una card. --}}
+          {{#each upcoming}}
+            <li class="booking-card">
+              <header class="booking-card__head">
+                <h3 class="booking-card__title">
+                  <a href="/resources/{{resource_id}}">{{resource_name}}</a>
+                </h3>
+                <span class="badge badge--{{resource_type}}">{{typeLabel}}</span>
+              </header>
+              <p class="booking-card__when">
+                <strong>{{date_label}}</strong>
+                <span class="booking-card__separator">·</span>
+                {{start_time}} – {{end_time}}
+              </p>
+              <div class="booking-card__actions">
+                {{!--
+  Azioni disponibili solo per prenotazioni future e confermate:
+  export .ics e annullamento.
+--}}
+                {{#if cancellable}}
+                  <a class="btn btn--secondary btn--small" href="/bookings/{{id}}/ics"
+                     rel="nofollow"
+                     title="Scarica un file .ics da importare in Google Calendar, Apple Calendar o Outlook">
+                    Aggiungi al calendario (.ics)
+                  </a>
+                  <form method="post" action="/bookings/{{id}}/cancel">
+                    <button type="submit" class="btn btn--danger btn--small">Annulla prenotazione</button>
+                  </form>
+                {{/if}}
+              </div>
+            </li>
+          {{/each}}
+        </ul>
+      {{else}}
+        <p class="empty-state">
+          Non hai prenotazioni future. <a href="/resources">Sfoglia le risorse disponibili</a>.
+        </p>
+      {{/if}}
+    </section>
+  
+  {{!-- Vista calendario: organizza le prossime prenotazioni per settimana. --}}
+  {{else if (eq view 'calendar')}}
+    <section class="bookings-section bookings-section--calendar" role="tabpanel" aria-label="Calendario settimanale">
+      <p class="calendar-week-label">{{calendar.weekLabel}}</p>
+      {{!-- Navigazione tra settimana precedente, settimana corrente e successiva. --}}
+      <nav class="calendar-nav" aria-label="Navigazione settimane">
+        <a class="btn btn--secondary btn--small" href="{{calendar.prevWeekUrl}}">← Settimana precedente</a>
+        <a class="btn btn--secondary btn--small" href="{{calendar.todayWeekUrl}}">Oggi</a>
+        <a class="btn btn--secondary btn--small" href="{{calendar.nextWeekUrl}}">Settimana successiva →</a>
+      </nav>
+
+      {{!-- Griglia settimanale: una colonna/blocco per ogni giorno. --}}
+      <div class="calendar-grid">
+        {{!-- Ciclo sui sette giorni della settimana preparati dal backend. --}}
+        {{#each calendar.days}}
+          <section class="calendar-day{{#if isToday}} calendar-day--today{{/if}}" aria-label="{{dayLong}} {{labelFull}}">
+            <header class="calendar-day__head">
+              <span class="calendar-day__name">{{dayLong}}</span>
+              <span class="calendar-day__date">{{label}}</span>
+            </header>
+            {{!-- Se il giorno contiene prenotazioni, mostro la lista degli eventi. --}}
+            {{#if items.length}}
+              <ul class="calendar-day__items">
+                {{#each items}}
+                  <li class="calendar-item calendar-item--{{statusKey}}">
+                    <p class="calendar-item__time">{{start_time}}–{{end_time}}</p>
+                    <p class="calendar-item__resource">
+                      <span class="badge badge--{{resource_type}}">{{typeLabel}}</span>
+                      <a href="/resources/{{resource_id}}">{{resource_name}}</a>
+                    </p>
+                    <span class="status-badge status-badge--{{statusKey}}">{{statusLabel}}</span>
+                    {{!--
+                      Azioni mostrate solo per le card cancellabili
+                      (futura + confermata). In coerenza con la tab
+                      Prossime, il link .ics non compare mai sulle
+                      voci passate o annullate.
+                    --}}
+                    {{#if cancellable}}
+                      <div class="calendar-item__actions">
+                        <a class="btn btn--secondary btn--small" href="/bookings/{{id}}/ics"
+                           rel="nofollow"
+                           title="Scarica il file .ics">
+                          Aggiungi al calendario (.ics)
+                        </a>
+                        <form method="post" action="/bookings/{{id}}/cancel">
+                          <button type="submit" class="btn btn--danger btn--small">Annulla</button>
+                        </form>
+                      </div>
+                    {{/if}}
+                  </li>
+                {{/each}}
+              </ul>
+              {{!-- Giorno senza prenotazioni: mostro un segnaposto vuoto. --}}
+            {{else}}
+              <p class="calendar-day__empty">—</p>
+            {{/if}}
+          </section>
+        {{/each}}
+      </div>
+    </section>
+  
+  {{!-- Vista storico: mostra prenotazioni passate o annullate. --}}
+  {{else}}
+    <section class="bookings-section" role="tabpanel" aria-label="Storico prenotazioni">
+      {{#if history.length}}
+        <ul class="bookings-list">
+          {{!-- Ciclo sulle prenotazioni dello storico. --}}
+          {{#each history}}
+            <li class="booking-card booking-card--past">
+              <header class="booking-card__head">
+                <h3 class="booking-card__title">{{resource_name}}</h3>
+                <div class="booking-card__badges">
+                  <span class="badge badge--{{resource_type}}">{{typeLabel}}</span>
+                  <span class="status-badge status-badge--{{statusKey}}">{{statusLabel}}</span>
+                </div>
+              </header>
+              <p class="booking-card__when">
+                <strong>{{date_label}}</strong>
+                <span class="booking-card__separator">·</span>
+                {{start_time}} – {{end_time}}
+              </p>
+              {{!--
+                Lo storico (passate o annullate) non espone il link
+                .ics: aggiungere al calendario un evento concluso o
+                annullato non ha senso applicativo e la rotta
+                GET /bookings/:id/ics lo rifiuterebbe comunque.
+              --}}
+            </li>
+          {{/each}}
+        </ul>
+      {{else}}
+        <p class="empty-state">Nessuna prenotazione conclusa o annullata.</p>
+      {{/if}}
+    </section>
+  {{/if}}
+</main>

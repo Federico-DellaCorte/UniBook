@@ -1,0 +1,1902 @@
+/* 
+   Foglio di stile globale dell'applicazione UniBook.
+
+   Questo file è scritto in CSS, cioè il linguaggio usato dal
+   browser per definire l'aspetto grafico delle pagine HTML.
+
+   A differenza dei file .hbs, che definiscono la struttura della
+   pagina, questo file stabilisce come gli elementi devono apparire:
+   colori, spaziature, griglie, bordi, ombre, bottoni, form, card,
+   calendari e comportamento responsive.
+
+   Il CSS viene collegato al sito nel layout principale main.hbs con:
+
+     <link rel="stylesheet" href="/css/styles.css" />
+
+   Il percorso reale del file nel progetto è:
+
+     public/css/styles.css
+
+   Express serve la cartella public come contenuto statico, quindi il
+   browser può scaricare questo file tramite l'URL /css/styles.css.
+
+   Il file è organizzato per blocchi funzionali:
+     - variabili globali e impostazioni base;
+     - messaggi flash e callout;
+     - homepage, layout generico e card;
+     - categorie, risorse e dettaglio risorsa;
+     - form, bottoni e dashboard;
+     - disponibilità settimanale e riepiloghi;
+     - prenotazioni, filtri e calendario;
+     - pagine di errore 404 e 500.
+
+   Le classi CSS sono richiamate direttamente nei template Handlebars.
+   Per esempio, se un template usa class="resource-card", il suo stile
+   viene definito in questo file dal selettore .resource-card.
+   */
+
+/* 
+   Variabili CSS globali.
+
+   :root definisce valori riutilizzabili in tutto il foglio di stile:
+   colori, raggi dei bordi e palette delle categorie.
+
+   Le variabili iniziano con -- e vengono poi usate con var(...).
+   Per esempio:
+
+     --color-primary: #1e3a8a;
+
+   può essere richiamata così:
+
+     color: var(--color-primary);
+
+   Questo evita di ripetere gli stessi colori in decine di punti e
+   rende più semplice modificare la grafica dell'intera applicazione.
+  */
+:root {
+  --color-bg: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-text: #1a1f2e;
+  --color-muted: #5a6478;
+  --color-primary: #1e3a8a;
+  --color-primary-hover: #1e40af;
+  --color-primary-soft: #e6ecf7;
+  --color-border: #d8deea;
+  --color-success-bg: #d1fae5;
+  --color-success-text: #064e3b;
+  --color-success-border: #6ee7b7;
+  --color-error-bg: #fee2e2;
+  --color-error-text: #7f1d1d;
+  --color-error-border: #fca5a5;
+  --color-info-bg: #dbeafe;
+  --color-info-text: #1e3a8a;
+  --color-info-border: #93c5fd;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-soft: #fef2f2;
+
+  /* Palette delle categorie di risorse. Sono colori ad alta
+     leggibilità, sobri, ognuno con la propria variante "soft" da
+     usare come sfondo per badge e segnalibri. */
+  --color-cat-aula: #047857;
+  --color-cat-aula-soft: #d1fae5;
+  --color-cat-sala: #6d28d9;
+  --color-cat-sala-soft: #ede9fe;
+  --color-cat-laboratorio: #b45309;
+  --color-cat-laboratorio-soft: #fef3c7;
+  --color-cat-postazione: #1d4ed8;
+  --color-cat-postazione-soft: #dbeafe;
+  --color-cat-attrezzatura: #be123c;
+  --color-cat-attrezzatura-soft: #ffe4e6;
+
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+/* 
+   Reset del box model.
+
+   box-sizing: border-box fa sì che larghezza e altezza includano
+   anche padding e bordo. Questo rende più prevedibile il calcolo
+   delle dimensioni degli elementi e riduce problemi di overflow.
+    */
+* {
+  box-sizing: border-box;
+}
+
+/* 
+   Impostazioni base del documento.
+
+   Qui vengono definiti margini iniziali, font globale, colore di
+   sfondo, colore del testo e altezza minima della pagina.
+
+   Tutte le pagine ereditano queste impostazioni di base, salvo
+   regole più specifiche definite nei blocchi successivi.
+    */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+/* 
+   Messaggi flash.
+
+   I messaggi flash sono notifiche temporanee generate dal backend
+   dopo un'azione dell'utente, per esempio login riuscito, errore
+   di validazione o prenotazione creata.
+
+   Nel template flash.hbs questi messaggi usano classi come:
+
+     .flash
+     .flash--success
+     .flash--error
+     .flash--info
+
+   Il contenitore .flash-container resta in alto nella pagina grazie
+   a position: sticky. Se non contiene messaggi, viene nascosto con
+   .flash-container:empty.
+
+   La classe .flash--fading viene aggiunta da public/js/flash-dismiss.js
+   per far partire l'animazione di scomparsa.
+  */
+.flash-container {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 1rem 1rem 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.flash-container:empty {
+  display: none;
+}
+
+.flash {
+  max-width: 36rem;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
+  border: 1px solid transparent;
+  transition: opacity 350ms ease, transform 350ms ease;
+}
+
+.flash--fading {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.flash--success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+}
+
+.flash--error {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  border-color: var(--color-error-border);
+}
+
+.flash--info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  border-color: var(--color-info-border);
+}
+
+/* 
+   Callout permanenti.
+
+   I callout sono banner informativi o di avviso inseriti dentro il
+   contenuto della pagina. A differenza dei messaggi flash, non
+   spariscono automaticamente.
+
+   Sono usati soprattutto per errori del form, avvisi importanti e
+   pagine admin di conferma, dove l'utente deve leggere il messaggio
+   prima di procedere.
+
+   Le varianti principali sono:
+     - .callout--warning
+     - .callout--danger
+  */
+.callout {
+  padding: 1rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0 0 1.5rem 0;
+}
+
+.callout--warning {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.callout--danger {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-error-text);
+}
+
+/* 
+   Homepage / Hero.
+
+   Questo blocco definisce la schermata iniziale del progetto.
+   La classe .hero centra verticalmente e orizzontalmente il titolo,
+   lo slogan e i pulsanti principali.
+
+   Le classi .hero__title, .hero__tagline e .hero__actions sono usate
+   nel template home.hbs.
+   */
+.hero {
+  min-height: calc(100vh - 1rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.hero__title {
+  font-size: clamp(3rem, 9vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.75rem 0;
+  color: var(--color-primary);
+}
+
+.hero__tagline {
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  color: var(--color-muted);
+  margin: 0 0 2.5rem 0;
+  max-width: 40rem;
+}
+
+.hero__actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero__logout-form {
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+}
+
+/* 
+   Layout generico delle pagine interne.
+
+   .page è il contenitore standard delle pagine secondarie, come
+   elenco risorse, risultati di ricerca, prenotazioni e area admin.
+
+   Imposta larghezza massima, margini automatici e padding.
+   .page-header gestisce invece titolo, sottotitolo e link di ritorno.
+  */
+.page {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.page--centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header__back {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+}
+
+.page-header__back:hover {
+  text-decoration: underline;
+}
+
+.page-header__title {
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.page-header__subtitle {
+  margin: 0.5rem 0 0 0;
+  color: var(--color-muted);
+  font-size: 1rem;
+}
+
+.page-header__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* 
+   Pagine centrate con card.
+
+   Questo blocco viene usato per pagine come login, registrazione,
+   dashboard e form amministrativi.
+
+   .auth e .dashboard centrano il contenuto nella viewport.
+   .card definisce il contenitore bianco con bordo, ombra e padding.
+   .card--wide è una variante più larga per pagine con più contenuto.
+  */
+.auth,
+.dashboard {
+  min-height: calc(100vh - 1rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.card {
+  background: var(--color-surface);
+  padding: 2.5rem 2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 32px rgba(30, 58, 138, 0.06);
+  width: 100%;
+  max-width: 28rem;
+}
+
+/* Variante più larga per dashboard amministratore e form risorsa,
+   dove servono più spazio per la griglia di categorie o per i
+   campi del form. */
+.card--wide {
+  max-width: 40rem;
+}
+
+.card__brand {
+  text-align: center;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-primary);
+  margin: 0 0 0.25rem 0;
+}
+
+.card__brand-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card__brand-link:hover {
+  opacity: 0.85;
+}
+
+.card__title {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  margin: 0 0 1.75rem 0;
+}
+
+.card__lead {
+  color: var(--color-text);
+  line-height: 1.6;
+  margin: 0 0 1.25rem 0;
+}
+
+.card__hint {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  margin: 1.25rem 0 0 0;
+  line-height: 1.5;
+}
+
+.card__alt {
+  text-align: center;
+  margin: 1.5rem 0 0 0;
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
+.card__alt a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.card__alt a:hover {
+  text-decoration: underline;
+}
+
+.card__actions {
+  margin: 1.5rem 0 0 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* 
+   Call to action della dashboard.
+
+   .dashboard-cta definisce i grandi link operativi della dashboard,
+   per esempio "Risorse disponibili", "Le mie prenotazioni",
+   "Gestione risorse" o "Tutte le prenotazioni".
+
+   Sono link stilizzati come card cliccabili, pensati per guidare
+   l'utente verso le azioni principali dopo il login.
+ */
+.dashboard-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft);
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: background-color 120ms ease, transform 120ms ease,
+    border-color 120ms ease;
+  margin-top: 0.5rem;
+}
+
+.dashboard-cta:hover {
+  background: #d6e1f4;
+  border-color: var(--color-primary);
+}
+
+.dashboard-cta__title {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.dashboard-cta__hint {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+/* 
+   Griglia delle categorie.
+
+   Questo blocco gestisce le card delle categorie di risorse:
+   aule, sale, laboratori, postazioni e attrezzature.
+
+   La griglia usa CSS Grid con:
+
+     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+
+   Questo significa che il browser crea automaticamente tutte le
+   colonne che entrano nello spazio disponibile, mantenendo ogni card
+   larga almeno 16rem.
+
+   Le classi .category-card__icon--aula, .category-card__icon--sala,
+   ecc. applicano colori diversi alle icone delle categorie.
+  */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.category-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 1.75rem 1.5rem;
+  min-height: 11rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color 120ms ease, transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.category-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(30, 58, 138, 0.1);
+}
+
+/* Contenitore quadrato dell'icona: imposta lo sfondo "soft" e il
+   colore principale della categoria. Il file SVG dentro la partial
+   eredita questo colore tramite stroke="currentColor", così la
+   stessa icona si tinge in automatico nelle cinque sfumature. */
+.category-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.category-card__icon svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.category-card__icon--aula {
+  background: var(--color-cat-aula-soft);
+  color: var(--color-cat-aula);
+}
+.category-card__icon--sala {
+  background: var(--color-cat-sala-soft);
+  color: var(--color-cat-sala);
+}
+.category-card__icon--laboratorio {
+  background: var(--color-cat-laboratorio-soft);
+  color: var(--color-cat-laboratorio);
+}
+.category-card__icon--postazione {
+  background: var(--color-cat-postazione-soft);
+  color: var(--color-cat-postazione);
+}
+.category-card__icon--attrezzatura {
+  background: var(--color-cat-attrezzatura-soft);
+  color: var(--color-cat-attrezzatura);
+}
+
+.category-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.category-card__title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  color: var(--color-primary);
+}
+
+.category-card__count {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
+/* 
+   Griglia e card delle risorse.
+
+   Questo blocco definisce l'aspetto delle liste di risorse, sia lato
+   utente sia lato amministratore.
+
+   .resource-grid dispone le risorse in una griglia responsive.
+   .resource-card rappresenta la singola risorsa con nome, capienza,
+   posizione, descrizione, disponibilità e azioni.
+
+   .resource-card--inactive viene usata nell'area admin per attenuare
+   visivamente le risorse disattivate.
+*/
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.resource-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.resource-card:hover {
+  border-color: var(--color-primary);
+}
+
+.resource-card--inactive {
+  opacity: 0.65;
+  background: #f8fafc;
+}
+
+.resource-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.resource-card__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.3;
+}
+
+.resource-card__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.resource-card__meta dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.resource-card__meta dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.resource-card__description {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.resource-card__link {
+  margin-top: auto;
+  align-self: flex-start;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.resource-card__link:hover {
+  text-decoration: underline;
+}
+
+.resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.resource-actions__form {
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+}
+
+/* 
+   Pagina dettaglio risorsa.
+
+   Questo blocco gestisce la scheda completa di una singola risorsa:
+   titolo, badge categoria, dati principali, descrizione, disponibilità
+   settimanale, disponibilità giornaliera e pulsante di prenotazione.
+
+   Le classi sono usate soprattutto nel template:
+
+     views/pages/resources/show.hbs
+  */
+.resource-show {
+  padding: 2rem 2rem 2.5rem;
+}
+
+.resource-show__head {
+  margin-bottom: 1.25rem;
+}
+
+.resource-show__back {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+}
+
+.resource-show__back:hover {
+  text-decoration: underline;
+}
+
+.resource-show__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.resource-show__title {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.resource-show__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 1rem 1.5rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.resource-show__details dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.resource-show__details dd {
+  margin: 0.25rem 0 0 0;
+  font-weight: 500;
+}
+
+.resource-show__description h2 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin: 0 0 0.5rem 0;
+}
+
+.resource-show__description p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.resource-show__reservation {
+  margin-top: 1.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.resource-show__reservation-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+/* 
+   Badge di categoria e stato.
+
+   I badge sono piccole etichette visive usate per indicare:
+     - la categoria della risorsa;
+     - lo stato attiva/disattivata;
+     - lo stato delle prenotazioni.
+
+   Le varianti .badge--aula, .badge--sala, ecc. usano la palette
+   delle categorie definita in :root.
+  */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.badge--aula {
+  background: var(--color-cat-aula-soft);
+  color: var(--color-cat-aula);
+}
+.badge--sala {
+  background: var(--color-cat-sala-soft);
+  color: var(--color-cat-sala);
+}
+.badge--laboratorio {
+  background: var(--color-cat-laboratorio-soft);
+  color: var(--color-cat-laboratorio);
+}
+.badge--postazione {
+  background: var(--color-cat-postazione-soft);
+  color: var(--color-cat-postazione);
+}
+.badge--attrezzatura {
+  background: var(--color-cat-attrezzatura-soft);
+  color: var(--color-cat-attrezzatura);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.status-badge--active {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.status-badge--inactive {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* 
+   Stato vuoto.
+
+   .empty-state viene mostrato quando una lista non contiene elementi,
+   per esempio nessuna risorsa trovata o nessuna prenotazione presente.
+
+   Invece di lasciare la pagina vuota, mostra un messaggio centrato e
+   visivamente distinto.
+ */
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* 
+   Form e campi di input.
+
+   Questo blocco definisce lo stile comune dei form: layout verticale,
+   label, input, select, textarea e messaggi di errore.
+
+   .form-input--invalid viene applicata quando il backend segnala un
+   errore su un campo specifico. In quel caso il bordo diventa rosso e
+   il campo risulta immediatamente riconoscibile.
+*/
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.375rem;
+  color: var(--color-text);
+}
+
+.form-input {
+  font: inherit;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--color-text);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+}
+
+.form-input--invalid {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.form-input--invalid:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  font-family: inherit;
+}
+
+.form-error {
+  margin: 0.375rem 0 0 0;
+  font-size: 0.875rem;
+  color: var(--color-danger);
+}
+
+/* Riga azioni in fondo ai form admin: due bottoni allineati a
+   destra con uno spazio costante, oppure stack verticale su mobile. */
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+/* 
+   Bottoni.
+
+   .btn è la classe base comune a link e button che devono apparire
+   come pulsanti.
+
+   Le varianti definiscono il significato visivo dell'azione:
+     - .btn--primary: azione principale;
+     - .btn--secondary: azione neutra;
+     - .btn--danger: azione pericolosa ma reversibile;
+     - .btn--danger-strong: azione grave e definitiva;
+     - .btn--small: bottone compatto;
+     - .btn--block: bottone a larghezza piena.
+    */
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 120ms ease, color 120ms ease,
+    border-color 120ms ease, transform 120ms ease;
+}
+
+.btn--primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn--primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.btn--secondary {
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+  border-color: var(--color-border);
+}
+
+.btn--secondary:hover {
+  background-color: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.btn--danger {
+  background-color: var(--color-surface);
+  color: var(--color-danger);
+  border-color: var(--color-error-border);
+}
+
+.btn--danger:hover {
+  background-color: var(--color-danger-soft);
+  border-color: var(--color-danger);
+}
+
+/* Variante "piena" del bottone pericoloso: sfondo rosso pieno con
+   testo bianco. È riservata alle azioni più gravi e irreversibili
+   (eliminazione definitiva di una risorsa); il contrasto con la
+   variante .btn--danger (più sobria, contornata) trasmette
+   chiaramente la differenza di impatto delle due azioni. */
+.btn--danger-strong {
+  background-color: var(--color-danger);
+  color: #ffffff;
+  border-color: var(--color-danger);
+}
+
+.btn--danger-strong:hover {
+  background-color: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
+}
+
+.btn--block {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* Bottone in formato compatto, usato nelle card di risorsa
+   ammnistrative e nei pulsanti d'intestazione di lista. */
+.btn--small {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.875rem;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/*
+   Layout a due colonne nei form.
+
+   .form-row-two viene usata per campi collegati tra loro, come:
+     - ora inizio / ora fine;
+     - apertura / chiusura.
+
+   Su schermi piccoli, la media query trasforma le due colonne in
+   una sola colonna per mantenere il form leggibile.
+ */
+.form-row-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .form-row-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------
+   Gruppo di CTA della dashboard
+
+   Le due CTA principali (consultazione + prenotazioni) sono
+   impilate verticalmente con un piccolo gap, così la pagina
+   resta leggibile anche su mobile dove le card a fianco non
+   troverebbero spazio.
+   ------------------------------------------------------------ */
+.dashboard-cta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* 
+   Disponibilità nella scheda risorsa.
+
+   Questo blocco separa visivamente la disponibilità settimanale e
+   la disponibilità giornaliera dal resto dei dati della risorsa.
+
+   Serve nella pagina dettaglio risorsa, dove l'utente deve capire
+   quando la risorsa è aperta e quando può procedere alla prenotazione.
+  */
+.resource-show__availability {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.resource-show__availability h2 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin: 0 0 0.5rem 0;
+}
+
+.resource-show__availability-window {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.resource-show__cta {
+  margin-top: 1.75rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 
+   Liste e card delle prenotazioni.
+
+   Questo blocco viene usato sia nella pagina "Le mie prenotazioni"
+   sia nella vista admin di tutte le prenotazioni.
+
+   Ogni prenotazione viene mostrata come card con risorsa, data,
+   orario, stato, eventuale utente proprietario e azioni disponibili.
+
+   .booking-card--past attenua visivamente prenotazioni concluse o
+   annullate, dando più peso alle prenotazioni future.
+ */
+.bookings-section {
+  margin-top: 2rem;
+}
+
+.bookings-section__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-primary);
+  margin: 0 0 0.75rem 0;
+}
+
+.bookings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.booking-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.booking-card--past {
+  background: #f8fafc;
+}
+
+.booking-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.booking-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.booking-card__title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.booking-card__title a:hover {
+  text-decoration: underline;
+}
+
+.booking-card__badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.booking-card__when {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.booking-card__separator {
+  color: var(--color-muted);
+  margin: 0 0.25rem;
+}
+
+.booking-card__actions {
+  margin: 0.5rem 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/*
+Azioni compatte dentro gli elementi del calendario.
+
+   Nel calendario utente una prenotazione può avere più azioni, per
+   esempio export .ics e annullamento. Questo blocco le dispone
+   affiancate con gap costante e mantiene puliti i form inline.
+ */
+.calendar-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+.calendar-item__actions form {
+  margin: 0;
+}
+
+.booking-card__user {
+  margin: 0;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.booking-card__user-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.booking-card__user-email::before {
+  content: "·";
+  margin-right: 0.5rem;
+  color: var(--color-border);
+}
+
+/* Stato badge: variante "active" coerente con la palette di
+   conferma, "cancelled" e "past" con tinte più sobrie. */
+.status-badge--cancelled {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.status-badge--past {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* 
+   Barra dei filtri dell'area admin prenotazioni.
+
+   .filter-bar organizza i filtri per periodo, tipologia e risorsa.
+   Usa CSS Grid per adattarsi allo spazio disponibile.
+
+   È usata nelle viste admin lista e calendario delle prenotazioni.
+ */
+.filter-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  align-items: end;
+  padding: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+}
+
+.filter-bar__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+/* 
+   Disponibilità settimanale nei form admin.
+
+   Questo blocco stilizza il partial weekly-availability.hbs, usato
+   nelle pagine admin di creazione e modifica risorsa.
+
+   Ogni .weekly-day rappresenta un giorno della settimana con:
+     - checkbox aperto/chiuso;
+     - select orario di apertura;
+     - select orario di chiusura;
+     - eventuali errori di validazione.
+
+   .weekly-day--closed attenua i giorni chiusi. Questa classe viene
+   aggiornata anche da public/js/availability-toggle.js.
+   */
+.weekly-availability {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 0;
+  background: var(--color-surface);
+}
+
+.weekly-availability__legend {
+  font-weight: 700;
+  color: var(--color-primary);
+  padding: 0 0.25rem;
+}
+
+.weekly-day {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.weekly-day:last-child {
+  border-bottom: none;
+}
+
+.weekly-day--closed {
+  opacity: 0.65;
+}
+
+.weekly-day__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.weekly-day__checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.weekly-day__name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.weekly-day__times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.weekly-day__time {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.weekly-day__time-label {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.weekly-day__select {
+  padding: 0.45rem 0.6rem;
+}
+
+.weekly-day__select:disabled {
+  background: #f3f4f6;
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.weekly-day__error {
+  grid-column: 1 / -1;
+  margin: 0.25rem 0 0 0;
+}
+
+@media (max-width: 560px) {
+  .weekly-day {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 
+   Riepilogo settimanale in sola lettura.
+
+   .weekly-summary mostra gli orari settimanali di una risorsa senza
+   renderli modificabili.
+
+   È usato nel dettaglio risorsa, nel form di prenotazione e nelle
+   card admin delle risorse.
+ */
+.weekly-summary {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.35rem 1rem;
+}
+
+.weekly-summary--inline {
+  margin: 0.5rem 0 1rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius);
+}
+
+.weekly-summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+  font-size: 0.95rem;
+}
+
+.weekly-summary__row--closed {
+  color: var(--color-muted);
+}
+
+.weekly-summary__day {
+  font-weight: 600;
+}
+
+.weekly-summary__time {
+  font-variant-numeric: tabular-nums;
+}
+
+.resource-show__availability-hint {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+/* Sintesi compatta nelle card admin: piccolo blocco "Disponibilità"
+   con etichetta e lista a punti senza marker. */
+.resource-card__availability {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.resource-card__availability-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 0.25rem;
+}
+
+.resource-card__availability-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.resource-card__availability-list li {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 
+   Hint e note inline dei form.
+
+   .form-hint mostra messaggi brevi sotto o vicino ai campi del form.
+   Le varianti warning e rules servono per avvisi più evidenti, come
+   giorno chiuso o regole applicate alla prenotazione.
+ */
+.form-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.form-hint--warning {
+  padding: 0.65rem 0.85rem;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  border-radius: var(--radius);
+}
+
+.form-hint--rules {
+  margin-top: 1.1rem;
+  padding: 0.7rem 0.9rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* 
+   Pagine di conferma intermedia admin.
+
+   Questo blocco gestisce l'elenco compatto delle prenotazioni future
+   impattate da operazioni amministrative sensibili, come modifica,
+   disattivazione o eliminazione di una risorsa.
+
+   Le classi principali sono:
+     - .confirm-section-title;
+     - .confirm-bookings;
+     - .confirm-bookings__reason.
+    */
+.confirm-section-title {
+  margin: 1.3rem 0 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.confirm-bookings {
+  margin: 0 0 0.5rem;
+  padding: 0.4rem 0.85rem 0.4rem 1.6rem;
+  background: #fef9c3;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  list-style: disc;
+  font-size: 0.88rem;
+  color: #713f12;
+  line-height: 1.55;
+}
+
+.confirm-bookings__reason {
+  color: #92400e;
+  font-style: italic;
+}
+
+/* 
+   Tab bar.
+
+   .tab-bar viene usata per passare tra viste diverse della stessa
+   sezione, per esempio:
+     - prossime / calendario / storico nelle prenotazioni utente;
+     - lista / calendario nelle prenotazioni admin.
+
+   I link sono normali link GET, quindi funzionano anche senza
+   JavaScript.
+ */
+.tab-bar {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 1.25rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab-bar__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  text-decoration: none;
+  color: var(--color-muted);
+  font-weight: 600;
+  border-radius: var(--radius) var(--radius) 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.tab-bar__link:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.tab-bar__link--active {
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  /* Il bordo inferiore del tab attivo "scavalca" la linea del
+     contenitore creando l'effetto di pestello attivo. */
+  margin-bottom: -1px;
+}
+
+.tab-bar__count {
+  display: inline-block;
+  min-width: 1.5rem;
+  padding: 0.05rem 0.45rem;
+  text-align: center;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tab-bar__link--active .tab-bar__count {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+/* 
+   Form di ricerca pubblica delle risorse.
+
+   Questo blocco stilizza il partial resources-search-form.hbs.
+   Il form permette di filtrare le risorse per tipologia, data,
+   orario, capienza minima e parola chiave.
+
+   .resource-search__grid usa CSS Grid per disporre i campi in modo
+   ordinato e responsive.
+  */
+.resource-search {
+  margin: 0 0 1.6rem 0;
+  padding: 1.1rem 1.2rem;
+  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.resource-search__title h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.resource-search__hint {
+  margin: 0.25rem 0 0.9rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.resource-search__hint--small {
+  margin-top: 0.8rem;
+  font-size: 0.8rem;
+}
+
+.resource-search__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.85rem;
+}
+
+.form-field--wide {
+  grid-column: span 2;
+}
+
+.resource-search__actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+/* 
+   Dettaglio risorsa: disponibilità del giorno.
+
+   Questo blocco gestisce la sezione "Disponibilità e prenotazioni
+   del giorno" nella scheda della risorsa.
+
+   Gli slot possono essere:
+     - .day-view__slot--free;
+     - .day-view__slot--partial;
+     - .day-view__slot--full.
+
+   Gli stessi stili vengono usati sia dal rendering server-side del
+   partial day-occupancy.hbs sia dall'aggiornamento AJAX di
+   resource-availability.js.
+*/
+.resource-show__day {
+  margin-top: 1.6rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.day-view__form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.day-view__panel {
+  min-height: 4rem;
+}
+
+.day-view__title {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.day-view__hours {
+  color: var(--color-muted);
+  font-weight: 400;
+  margin-left: 0.35rem;
+}
+
+.day-view__slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.day-view__slot {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #ffffff;
+  font-size: 0.9rem;
+  align-items: center;
+}
+
+.day-view__slot--free      { background: #ecfdf5; border-color: #a7f3d0; }
+.day-view__slot--partial   { background: #fef9c3; border-color: #fde68a; }
+.day-view__slot--full      { background: #fee2e2; border-color: #fecaca; }
+
+.day-view__slot-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.day-view__slot-status { color: var(--color-muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* 
+   Posti residui nella ricerca risorse.
+
+   Questa classe mostra la capienza residua quando l'utente effettua
+   una ricerca con data, ora inizio e ora fine.
+
+   Il dato viene calcolato lato server e qui viene solo presentato
+   graficamente nella card della risorsa.
+   */
+.resource-card__remaining {
+  margin: 0.6rem 0 0.2rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+/* 
+   Vista calendario settimanale.
+
+   Questo blocco gestisce la griglia calendario usata sia dall'utente
+   sia dall'amministratore.
+
+   .calendar-grid crea sette colonne, una per ogni giorno della
+   settimana. Le media query riducono il numero di colonne su tablet
+   e mobile.
+
+   .calendar-day--today evidenzia il giorno corrente.
+   .calendar-item rappresenta una singola prenotazione dentro il
+   giorno.
+*/
+.calendar-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  flex-wrap: wrap;
+}
+
+.calendar-week-label {
+  margin: 0.5rem 0;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .calendar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 540px) {
+  .calendar-grid { grid-template-columns: 1fr; }
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.55rem;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  min-height: 110px;
+}
+
+.calendar-day--today {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.calendar-day__head {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-day__name {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.calendar-day__date {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.calendar-day__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.calendar-day__empty {
+  margin: 0.6rem 0 0;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.calendar-item {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #f8fafc;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.calendar-item--past, .calendar-item--cancelled {
+  opacity: 0.65;
+}
+
+.calendar-item__time {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-item__resource,
+.calendar-item__user {
+  margin: 0;
+}
+
+.calendar-item__resource a {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.calendar-item__user {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+/* 
+   Pagine di errore 404 e 500.
+
+   Questo blocco aggiunge gli stili specifici alle pagine di errore,
+   mantenendo però la stessa struttura grafica delle card principali.
+
+   .error-card__code mostra il codice HTTP in grande.
+   .error-card__path mostra il percorso richiesto nella pagina 404.
+   .error-card .card__actions gestisce i bottoni di recupero, come
+   ritorno alla home o alla dashboard.
+   */
+.error-card {
+  text-align: center;
+}
+
+.error-card__code {
+  font-size: 4rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  color: var(--color-primary);
+  margin: 0.5rem 0 0 0;
+  line-height: 1;
+}
+
+.error-card__path {
+  margin: 0.75rem 0 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+
+.error-card__path code {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.error-card .card__actions {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

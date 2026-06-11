@@ -1,0 +1,175 @@
+{{!--
+  Pagina di creazione di una prenotazione.
+
+  Questo file è scritto in HTML con sintassi Handlebars.
+  È una pagina vera e propria, non un partial: quando Express renderizza
+  pages/bookings/new, il contenuto di questo file viene inserito dentro
+  {{{body}}} del layout principale main.hbs.
+
+  L'utente arriva qui dalla scheda dettaglio di una risorsa, cliccando il
+  pulsante "Prenota". La rotta GET /bookings/new riceve l'id della risorsa,
+  recupera i suoi dati dal database e prepara il form.
+
+  Il form invia una richiesta POST a /bookings con:
+    - resourceId: id della risorsa, inserito come campo nascosto;
+    - date: data scelta dall'utente;
+    - startTime: ora di inizio;
+    - endTime: ora di fine.
+
+  Questa pagina mostra anche:
+    - nome, categoria, capienza e posizione della risorsa;
+    - riepilogo settimanale della disponibilità;
+    - eventuali errori di validazione;
+    - regole attive della prenotazione;
+    - slot orari disponibili per il giorno selezionato.
+
+  Gli slot di inizio e fine arrivano dal backend in base alla disponibilità del
+  giorno iniziale. Se l'utente cambia data, il file public/js/booking-slots.js
+  può aggiornare dinamicamente gli slot usando i dati JSON presenti in fondo
+  alla pagina.
+
+  Anche se il frontend disabilita alcuni campi quando il giorno è chiuso, la
+  validazione vera resta sempre lato server: il bookingService controlla
+  disponibilità, durata, limiti, conflitti, capienza e transazione prima di
+  creare davvero la prenotazione.
+--}}
+
+{{!-- Contenitore principale della pagina di prenotazione. --}}
+<main class="auth">
+  {{!-- Card centrale con dati della risorsa, form e regole di prenotazione. --}}
+  <section class="card card--wide">
+    <h1 class="card__brand">
+      <a href="/" class="card__brand-link">UniBook</a>
+    </h1>
+    <h2 class="card__title">Prenota {{resource.name}}</h2>
+
+    <p class="card__lead">
+      <strong>{{typeLabel}}</strong> · capienza {{resource.capacity}} · {{resource.location}}
+    </p>
+
+    {{!--
+      Mini riepilogo settimanale incorporato sotto il titolo: con
+      una sola occhiata l'utente vede quali giorni sono prenotabili
+      e in quali orari, senza dover tornare al dettaglio risorsa.
+    --}}
+    <ul class="weekly-summary weekly-summary--inline">
+      {{#each availability}}
+        <li class="weekly-summary__row {{#unless is_open}}weekly-summary__row--closed{{/unless}}">
+          <span class="weekly-summary__day">{{dayName}}</span>
+          <span class="weekly-summary__time">
+            {{#if is_open}}{{opens_at}}–{{closes_at}}{{else}}chiusa{{/if}}
+          </span>
+        </li>
+      {{/each}}
+    </ul>
+
+    {{!-- Errore generale del form, mostrato sopra i campi. --}}
+    {{#if generalError}}
+      <div class="callout callout--danger" role="alert">{{generalError}}</div>
+    {{/if}}
+
+    {{!--
+  Form di prenotazione.
+
+  Invia i dati alla rotta POST /bookings.
+  novalidate disattiva la validazione automatica del browser: gli errori
+  principali vengono gestiti lato server e mostrati tramite errors.
+--}}
+    <form method="post" action="/bookings" class="form" novalidate id="booking-form">
+      {{!-- Campo nascosto: mantiene l'id della risorsa da prenotare. --}}
+      <input type="hidden" name="resourceId" value="{{resource.id}}">
+
+      {{!-- Campo data: permette di scegliere il giorno della prenotazione. --}}
+      <div class="form-field">
+        <label class="form-label" for="date">Data</label>
+        <input
+          id="date"
+          name="date"
+          type="date"
+          class="form-input{{#if errors.date}} form-input--invalid{{/if}}"
+          min="{{minDate}}"
+          value="{{values.date}}"
+          required
+        />
+        {{#if errors.date}}<p class="form-error">{{errors.date}}</p>{{/if}}
+      </div>
+
+      {{!--
+        Avviso "giorno chiuso": viene mostrato dal server se la data
+        precompilata cade in un giorno non prenotabile, ed è poi
+        gestito dinamicamente da booking-slots.js quando l'utente
+        cambia data.
+      --}}
+      <p
+        id="closed-message"
+        class="form-hint form-hint--warning"
+        {{#unless closedMessage}}hidden{{/unless}}
+      >{{closedMessage}}</p>
+
+      {{!-- Selezione dell'intervallo orario: ora di inizio e ora di fine. --}}
+      <div class="form-row-two">
+        {{!-- Select dell'ora di inizio, popolata con gli startSlots del giorno scelto. --}}
+        <div class="form-field">
+          <label class="form-label" for="startTime">Ora inizio</label>
+          <select
+            id="startTime"
+            name="startTime"
+            class="form-input{{#if errors.startTime}} form-input--invalid{{/if}}"
+            required
+            {{#if closedMessage}}disabled{{/if}}
+          >
+            <option value="">--</option>
+            {{#each startSlots}}
+              <option value="{{this}}" {{#if (eq this ../values.startTime)}}selected{{/if}}>{{this}}</option>
+            {{/each}}
+          </select>
+          {{#if errors.startTime}}<p class="form-error">{{errors.startTime}}</p>{{/if}}
+        </div>
+        {{!-- Select dell'ora di fine, popolata con gli endSlots del giorno scelto. --}}
+        <div class="form-field">
+          <label class="form-label" for="endTime">Ora fine</label>
+          <select
+            id="endTime"
+            name="endTime"
+            class="form-input{{#if errors.endTime}} form-input--invalid{{/if}}"
+            required
+            {{#if closedMessage}}disabled{{/if}}
+          >
+            <option value="">--</option>
+            {{#each endSlots}}
+              <option value="{{this}}" {{#if (eq this ../values.endTime)}}selected{{/if}}>{{this}}</option>
+            {{/each}}
+          </select>
+          {{#if errors.endTime}}<p class="form-error">{{errors.endTime}}</p>{{/if}}
+        </div>
+      </div>
+
+      {{!-- Azioni del form: annullare o confermare la prenotazione. --}}
+      <div class="form-row">
+        <a class="btn btn--secondary" href="/resources/{{resource.id}}">Annulla</a>
+        <button type="submit" class="btn btn--primary">Conferma prenotazione</button>
+      </div>
+    </form>
+
+    {{#if rules}}
+      {{!-- Regole principali applicate alla prenotazione della risorsa corrente. --}}
+      <p class="form-hint form-hint--rules">
+        <strong>Regole attive</strong>:
+        slot da {{rules.minDurationMinutes}} minuti ·
+        durata massima {{rules.maxDurationHours}} ore per le {{rules.typeLabelPlural}} ·
+        massimo {{rules.maxDailyHours}} ore al giorno di {{rules.typeLabelPlural}} ·
+        massimo {{rules.maxFutureBookings}} prenotazioni future attive.
+      </p>
+    {{/if}}
+  </section>
+</main>
+
+{{!--
+  Dati JSON della disponibilità settimanale.
+
+  Questo script non viene eseguito: contiene dati che booking-slots.js legge
+  per aggiornare gli orari quando l'utente cambia data.
+--}}
+<script type="application/json" id="availability-data">{{{availabilityJson}}}</script>
+{{!-- Script lato client che aggiorna dinamicamente gli slot del form. --}}
+<script defer src="/js/booking-slots.js"></script>
