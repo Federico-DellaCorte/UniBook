@@ -1,15 +1,15 @@
 # UniBook
 
-**Studente:** Federico della Corte  
-**Corso:** Tecnologie Informatiche per il Web — TIW 2026 — Politecnico di Milano  
-**Traccia scelta:** Traccia 1 — Piattaforma di Prenotazione Risorse  
+**Studente:** Federico Della Corte  
+**Corso:** Tecnologie Informatiche per il Web - Politecnico di Milano  
+**Traccia scelta:** Traccia 1 - Piattaforma di Prenotazione Risorse  
 **Tecnologie principali:** Node.js, Express, SQLite, Handlebars, HTML, CSS, JavaScript
 
 ---
 
 ## Descrizione generale
 
-UniBook è una piattaforma web per la prenotazione di risorse universitarie condivise, come aule studio, sale riunioni, laboratori, postazioni informatiche e attrezzature. Il progetto è stato sviluppato sulla base della **Traccia 1 — Piattaforma di Prenotazione Risorse** del corso Tecnologie Informatiche per il Web.
+UniBook è una piattaforma web per la prenotazione di risorse universitarie condivise, come aule studio, sale riunioni, laboratori, postazioni informatiche e attrezzature. Il progetto è stato sviluppato sulla base della **Traccia 1 - Piattaforma di Prenotazione Risorse** del corso Tecnologie Informatiche per il Web.
 
 L’applicazione realizza completamente il **Livello 1**, permettendo agli utenti di registrarsi, accedere, consultare l’elenco delle risorse, visualizzare il dettaglio di una risorsa, creare una prenotazione, vedere le proprie prenotazioni e cancellare quelle future. È inoltre presente un ruolo amministratore che può creare, modificare, disattivare, riattivare o eliminare risorse e visualizzare l’elenco complessivo delle prenotazioni.
 
@@ -42,7 +42,7 @@ Infine, UniBook include un’estensione di **Livello 3** tramite l’esportazion
 
 Questa sezione spiega passo per passo come scaricare, installare e avviare UniBook a partire dal repository GitHub.
 
-L’obiettivo è permettere a chi corregge il progetto di partire da una cartella pulita, installare le dipendenze, creare il database, inserire i dati di esempio e avviare l’applicazione senza dover configurare manualmente file aggiuntivi.
+L’obiettivo è, partendo da una cartella pulita, quello di installare le dipendenze, creare il database, inserire i dati di esempio e avviare l’applicazione senza dover configurare manualmente file aggiuntivi.
 
 ---
 
@@ -246,7 +246,7 @@ Non bisogna modificare file del progetto per cambiare porta. La porta viene lett
 
 ---
 
-### 9. Altri scenari (ricreare il DB, cosa va su GitHub)
+### 9. Altri scenari 
 
 Per ripartire da un database pulito, vedere la sezione [Ricreazione del database](#ricreazione-del-database) dentro [Database](#database): contiene i comandi PowerShell e Bash per rifare `data/app.db` da zero.
 
@@ -312,7 +312,7 @@ Prima di partire, assicurarsi di aver eseguito `npm install`, `npm run db:init`,
 
 ---
 
-### 2. Percorso utente standard — consultazione e prenotazione
+### 2. Percorso utente standard - consultazione e prenotazione
 
 1. **Indice categorie**: `/resources`. Si vedono le cinque categorie (aule, sale, laboratori, postazioni, attrezzature) come card, con sopra un form di ricerca avanzata.
 2. **Lista per categoria**: clic su una card oppure `/resources?type=aula`. Mostra le risorse attive della categoria con il riassunto della disponibilità settimanale.
@@ -387,7 +387,7 @@ Password: admin123
 
 ## Livelli della traccia implementati
 
-UniBook è stato sviluppato con l’obiettivo di coprire l’intero percorso previsto dalla **Traccia 1 — Piattaforma di Prenotazione Risorse**.
+UniBook è stato sviluppato con l’obiettivo di coprire l’intero percorso previsto dalla **Traccia 1 - Piattaforma di Prenotazione Risorse**.
 
 La traccia è divisa in tre livelli progressivi:
 
@@ -399,7 +399,7 @@ Il progetto implementa tutti e tre i livelli.
 
 ---
 
-### Livello 1 — Prenotazioni base
+### Livello 1 - Prenotazioni base
 
 Il Livello 1 richiede la realizzazione del nucleo principale di una piattaforma di prenotazione risorse.
 
@@ -454,7 +454,7 @@ La creazione della prenotazione viene inoltre eseguita dentro una transazione. Q
 
 ---
 
-### Livello 3 — Estensione: esportazione calendario `.ics`
+### Livello 3 - Estensione: esportazione calendario `.ics`
 
 Per il Livello 3 è stata implementata l’esportazione delle prenotazioni in formato `.ics` (standard iCalendar, RFC 5545).
 
@@ -470,9 +470,9 @@ Questa funzionalità rappresenta l’estensione di Livello 3 perché introduce u
 
 | Livello | Stato | Come viene realizzato in UniBook |
 |---|---|---|
-| **Livello 1** | Completato | Registrazione, login, risorse, dettaglio risorsa, creazione prenotazioni, cancellazione futura, gestione amministrativa |
-| **Livello 2** | Completato | Conflitti temporali, durata massima, fasce orarie, ricerca disponibilità, filtri, stati prenotazione, vista calendario |
-| **Livello 3** | Completato | Esportazione delle prenotazioni future confermate in formato `.ics` per calendari esterni |
+| **Livello 1** | Implementato | Registrazione, login, risorse, dettaglio risorsa, creazione prenotazioni, cancellazione futura, gestione amministrativa |
+| **Livello 2** | Implementato | Conflitti temporali, durata massima, fasce orarie, ricerca disponibilità, filtri, stati prenotazione, vista calendario |
+| **Livello 3** | Implementato | Esportazione delle prenotazioni future confermate in formato `.ics` per calendari esterni |
 
 In sintesi, UniBook implementa il nucleo funzionale richiesto dalla traccia, aggiunge le logiche avanzate di disponibilità e controllo dei conflitti, e include un’estensione di Livello 3 tramite integrazione con calendari esterni.
 
@@ -1401,7 +1401,7 @@ data/
 └── app.db                            # Database SQLite locale, non caricato su GitHub
 ```
 
-Il file `data/app.db` viene creato con `npm run db:init` e popolato con `npm run seed`. Non è necessario caricarlo su GitHub, perché chi clona il repository può rigenerarlo seguendo i comandi indicati nella sezione di avvio.
+Il file `data/app.db` viene creato con `npm run db:init` e popolato con `npm run seed`. Chi clona il repository può rigenerarlo seguendo i comandi indicati nella sezione di avvio.
 
 Ogni cartella ha una responsabilità specifica: `src/` contiene il backend, `views/` contiene le pagine HTML generate da Handlebars, `public/` contiene CSS e JavaScript lato client, mentre `data/` viene creata localmente per contenere il database SQLite.
 ---
@@ -1951,49 +1951,3 @@ npm start
 Il repository GitHub contiene il codice sorgente e i file necessari per ricostruire ed eseguire il progetto.
 
 Alcuni file non vengono caricati perché sono generati automaticamente.
-
-Non devono essere versionati:
-
-```text
-node_modules/
-data/app.db
-.env
-```
-
-La cartella `node_modules/` viene generata con:
-
-```bash
-npm install
-```
-
-Il file `data/app.db` viene generato con:
-
-```bash
-npm run db:init
-npm run seed
-```
-
-Il file `.env` non è necessario, perché UniBook funziona anche senza configurazioni esterne obbligatorie.
-
-Nel repository devono invece essere presenti:
-
-```text
-package.json
-package-lock.json
-README.md
-src/
-views/
-public/
-.gitignore
-```
-
-In questo modo chi clona il progetto da GitHub può avviarlo con la sequenza:
-
-```bash
-npm install
-npm run db:init
-npm run seed
-npm start
-```
-
-Questa struttura rende il repository più pulito, leggero e facilmente eseguibile.
