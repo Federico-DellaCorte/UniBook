@@ -3,7 +3,8 @@
 **Studente:** Federico Della Corte  
 **Corso:** Tecnologie Informatiche per il Web - Politecnico di Milano  
 **Traccia scelta:** Traccia 1 - Piattaforma di Prenotazione Risorse  
-**Tecnologie principali:** Node.js, Express, SQLite, Handlebars, HTML, CSS, JavaScript
+**Tecnologie principali:** Node.js, Express, SQLite, Handlebars, HTML, CSS, JavaScript  
+**Presentazione progetto:** [Apri la presentazione UniBook](https://pitch.com/v/unibook-9b6m85)
 
 ---
 
